@@ -1,2 +1,2 @@
 [client]
-ui.hideTopBar = true
+showSidebarNavigation = false
