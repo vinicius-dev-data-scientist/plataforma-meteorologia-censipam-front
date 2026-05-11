@@ -44,7 +44,11 @@ def render_sidebar():
                 Estações
                 </div>
                 <div class="submenu">
-                    <div class="submenu-item">INMET — Observações</div>
+                    <a href="?page=inmet"
+                    target="_self"
+                    class="submenu-item {'active' if active_page == 'inmet' else ''}">
+                    INMET - Observações
+                    </a>
                 </div>
             </div>
             <div class="menu-item">

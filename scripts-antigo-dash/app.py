@@ -3,6 +3,7 @@ import streamlit as st
 from components.style import load_css
 from components.sidebar import render_sidebar
 from components.header import render_header
+from pages import inmet_dash
 
 # =========================
 # CONFIG
@@ -51,8 +52,8 @@ def render_page(page):
 
     elif page == "inmet":
 
-        from services import inmet_dash_service
-        inmet_dash_service.render()
+        from pages import inmet_dash
+        inmet_dash.render()
 
     elif page == "radar":
 

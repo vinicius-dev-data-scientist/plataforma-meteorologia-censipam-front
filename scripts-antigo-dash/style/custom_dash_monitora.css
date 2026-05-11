@@ -329,14 +329,9 @@ button[kind="header"] {
   transition: all 0.2s ease;
 }
 
-/* 🔥 HOVER COM DEGRADÊ IGUAL À SIDEBAR */
+/* 🔥 HOVER COM FUNDO BRANCO */
 .submenu-item:hover {
-  background: linear-gradient(
-    90deg,
-    #A7DCE5,
-    #F5FBFC,
-    #BFEEDD
-  );
+  background: #FFFFFF;
   font-weight: 600;
   transform: translateX(3px);
 }
@@ -464,4 +459,61 @@ div[role="radiogroup"] input:checked + div {
 .badge.ciano {
   background: var(--ciano-claro);
   color: #0E6B75;
+}
+
+/* =========================
+   INMET - DASHBOARD DE MÉTRICAS
+========================= */
+
+.metric-card{
+
+    background:white;
+    border-radius:14px;
+
+    padding:18px;
+
+    box-shadow:
+    0 2px 8px rgba(0,0,0,.05);
+
+    min-height:120px;
+}
+
+.metric-title{
+
+    font-size:.72rem;
+
+    letter-spacing:.18em;
+
+    color:#9CA3AF;
+
+    font-weight:700;
+
+    margin-bottom:12px;
+}
+
+.metric-value{
+
+    font-size:2rem;
+
+    font-weight:800;
+
+    color:#1F2937;
+
+    line-height:1;
+}
+
+.metric-value span{
+
+    font-size:1rem;
+
+    color:#9CA3AF;
+}
+
+.metric-extra{
+
+    margin-top:10px;
+
+    font-size:.82rem;
+
+    color:#6B7280;
 }
