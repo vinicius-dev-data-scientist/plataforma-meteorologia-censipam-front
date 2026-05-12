@@ -40,14 +40,19 @@ def render_sidebar():
         <div class="menu">
             <div class="menu-item">
                 <div class="menu-title">
-                <img src="data:image/png;base64,{icon_estacoes}" class="menu-icon"/>
-                Estações
+                    <img src="data:image/png;base64,{icon_estacoes}" class="menu-icon"/>
+                    Estações
                 </div>
                 <div class="submenu">
                     <a href="?page=inmet"
                     target="_self"
                     class="submenu-item {'active' if active_page == 'inmet' else ''}">
-                    INMET - Observações
+                        INMET - Observações
+                    </a>
+                    <a href="?page=inmet_ranking"
+                    target="_self"
+                    class="submenu-item {'active' if active_page == 'inmet_ranking' else ''}">
+                        INMET - Ranking
                     </a>
                 </div>
             </div>

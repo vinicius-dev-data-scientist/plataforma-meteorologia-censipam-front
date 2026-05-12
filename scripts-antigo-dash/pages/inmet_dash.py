@@ -128,7 +128,7 @@ def render():
             [
                 "Resumo Diário",
                 "Eventos Extremos",
-                "Ranqueamento"
+                "Registro Diário"
             ],
             horizontal=True
         )
@@ -192,9 +192,13 @@ def render():
 
         render_extremos(df)
 
-    elif produto == "Ranqueamento":
+    elif produto == "Registro Diário":
 
-        render_ranking(df)
+        render_registro_diario(
+            df,
+            selected_date,
+            station_name
+        )
 
 
 def render_resumo(df, station_name, period):
@@ -554,100 +558,272 @@ def render_resumo(df, station_name, period):
             use_container_width=True
         )
 
+        # =========================
+    # PRECIPITAÇÃO + ROSA DOS VENTOS
+    # =========================
+
+    c3, c4 = st.columns(2)
+
     # =========================
     # PRECIPITAÇÃO
     # =========================
 
-    fig_prec = go.Figure()
+    with c3:
 
-    fig_prec.add_trace(
-        go.Bar(
-            x=df_daily["data"],
-            y=df_daily["chuva"],
+        fig_prec = go.Figure()
 
-            name="Precipitação",
+        fig_prec.add_trace(
+            go.Bar(
+                x=df_daily["data"],
+                y=df_daily["chuva"],
 
-            marker=dict(
-                color="#6EC6D1"
-            )
-        )
-    )
+                name="Precipitação",
 
-    fig_prec.update_layout(
-
-        title=dict(
-            text="PRECIPITAÇÃO DIÁRIA (MM)",
-            x=0,
-
-            font=dict(
-                size=15,
-                color="#374151"
-            )
-        ),
-
-        height=350,
-
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-
-        hovermode="x unified",
-
-        legend=dict(
-            orientation="h",
-            y=1.12,
-            x=0
-        ),
-
-        annotations=[
-
-            dict(
-                text=f"{period_label} · Total {total_chuva} mm",
-
-                x=1,
-                y=1.16,
-
-                xref="paper",
-                yref="paper",
-
-                xanchor="right",
-
-                showarrow=False,
-
-                font=dict(
-                    size=11,
-                    color="#0F766E"
+                marker=dict(
+                    color="#6EC6D1"
                 ),
 
-                bgcolor="#ECFEFF",
-
-                bordercolor="#A5F3FC",
-                borderwidth=1,
-
-                borderpad=6
+                hovertemplate=
+                "<b>%{x}</b><br>" +
+                "Chuva: %{y:.1f} mm<extra></extra>"
             )
-        ],
-
-        margin=dict(
-            l=10,
-            r=10,
-            t=60,
-            b=10
-        ),
-
-        xaxis=dict(
-            showgrid=False
-        ),
-
-        yaxis=dict(
-            showgrid=True,
-            gridcolor="rgba(0,0,0,.05)"
         )
-    )
 
-    st.plotly_chart(
-        fig_prec,
-        use_container_width=True
-    )
+        fig_prec.update_layout(
+
+            title=dict(
+                text="PRECIPITAÇÃO DIÁRIA (MM)",
+                x=0,
+
+                font=dict(
+                    size=15,
+                    color="#374151"
+                )
+            ),
+
+            height=350,
+
+            paper_bgcolor="white",
+            plot_bgcolor="white",
+
+            hovermode="x unified",
+
+            legend=dict(
+                orientation="h",
+                y=1.12,
+                x=0
+            ),
+
+            annotations=[
+
+                dict(
+                    text=f"{period_label} · Total {total_chuva} mm",
+
+                    x=1,
+                    y=1.16,
+
+                    xref="paper",
+                    yref="paper",
+
+                    xanchor="right",
+
+                    showarrow=False,
+
+                    font=dict(
+                        size=11,
+                        color="#0F766E"
+                    ),
+
+                    bgcolor="#ECFEFF",
+
+                    bordercolor="#A5F3FC",
+                    borderwidth=1,
+
+                    borderpad=6
+                )
+            ],
+
+            margin=dict(
+                l=10,
+                r=10,
+                t=60,
+                b=10
+            ),
+
+            xaxis=dict(
+                showgrid=False
+            ),
+
+            yaxis=dict(
+                title="mm",
+                showgrid=True,
+                gridcolor="rgba(0,0,0,.05)"
+            )
+        )
+
+        st.plotly_chart(
+            fig_prec,
+            use_container_width=True
+        )
+
+    # =========================
+    # ROSA DOS VENTOS
+    # =========================
+
+    with c4:
+
+        # DIREÇÕES
+        direcoes = [
+            "N", "NE", "E", "SE",
+            "S", "SO", "O", "NO"
+        ]
+
+        # CONTAGEM
+        freq = []
+
+        for d in direcoes:
+
+            valor = len(
+                df[
+                    df["vento_dir"]
+                    .astype(str)
+                    .str.upper()
+                    .str.contains(d, na=False)
+                ]
+            )
+
+            freq.append(valor)
+
+        # VELOCIDADE MÉDIA
+        vel_media = []
+
+        for d in direcoes:
+
+            subset = df[
+                df["vento_dir"]
+                .astype(str)
+                .str.upper()
+                .str.contains(d, na=False)
+            ]
+
+            vel = subset["vento_vel"].mean()
+
+            vel_media.append(
+                0 if str(vel) == "nan"
+                else round(vel, 1)
+            )
+
+        fig_vento = go.Figure()
+
+        fig_vento.add_trace(
+            go.Barpolar(
+
+                r=freq,
+
+                theta=direcoes,
+
+                marker=dict(
+                    color=vel_media,
+                    colorscale=[
+                        [0, "#D8F3DC"],
+                        [0.5, "#52B69A"],
+                        [1, "#1D3557"]
+                    ],
+
+                    colorbar=dict(
+                        title="Vel."
+                    ),
+
+                    line=dict(
+                        color="white",
+                        width=1
+                    )
+                ),
+
+                opacity=0.9,
+
+                hovertemplate=
+                "<b>%{theta}</b><br>" +
+                "Frequência: %{r}<br>" +
+                "Vel. Média: %{marker.color:.1f} m/s" +
+                "<extra></extra>"
+            )
+        )
+
+        fig_vento.update_layout(
+
+            title=dict(
+                text="ROSA DOS VENTOS",
+                x=0,
+
+                font=dict(
+                    size=15,
+                    color="#374151"
+                )
+            ),
+
+            height=350,
+
+            paper_bgcolor="white",
+            plot_bgcolor="white",
+
+            annotations=[
+
+                dict(
+                    text=f"{period_label} · {cidade}",
+
+                    x=1,
+                    y=1.16,
+
+                    xref="paper",
+                    yref="paper",
+
+                    xanchor="right",
+
+                    showarrow=False,
+
+                    font=dict(
+                        size=11,
+                        color="#155E75"
+                    ),
+
+                    bgcolor="#ECFEFF",
+
+                    bordercolor="#A5F3FC",
+                    borderwidth=1,
+
+                    borderpad=6
+                )
+            ],
+
+            polar=dict(
+
+                bgcolor="white",
+
+                radialaxis=dict(
+                    showticklabels=True,
+                    ticks=""
+                ),
+
+                angularaxis=dict(
+                    direction="clockwise"
+                )
+            ),
+
+            margin=dict(
+                l=10,
+                r=10,
+                t=60,
+                b=10
+            ),
+
+            showlegend=False
+        )
+
+        st.plotly_chart(
+            fig_vento,
+            use_container_width=True
+        )
 
 def render_extremos(df):
 
@@ -673,15 +849,298 @@ def render_extremos(df):
             f"{df['vento_raj'].max():.1f} m/s"
         )
 
-def render_ranking(df):
+def render_registro_diario(
+    df,
+    selected_date,
+    station_name
+):
 
-    st.markdown("## Ranqueamento")
+    st.markdown("## Registro Diário")
 
-    ranking = (
-        df.groupby("data")["chuva"]
-        .sum()
-        .sort_values(ascending=False)
-        .head(10)
-    )
+    # =========================
+    # FILTRA DATA
+    # =========================
 
-    st.dataframe(ranking)
+    df_day = df[
+        df["data"].dt.date == selected_date
+    ]
+
+    if df_day.empty:
+
+        st.warning(
+            "Sem registros para esta data."
+        )
+        return
+
+    # =========================
+    # DADOS
+    # =========================
+
+    temp_max = df_day["temp_max"].max()
+    temp_min = df_day["temp_min"].min()
+
+    umi_max = df_day["umi_max"].max()
+
+    chuva_total = df_day["chuva"].sum()
+
+    vento_med = df_day["vento_vel"].mean()
+
+    # =========================
+    # KPIs
+    # =========================
+
+    k1, k2, k3, k4, k5 = st.columns(5)
+
+    with k1:
+
+        metric_card(
+            "TEMP. MÁX.",
+            round(temp_max, 1),
+            "°C",
+            selected_date.strftime("%d/%m/%Y"),
+            "#E53935"
+        )
+
+    with k2:
+
+        metric_card(
+            "TEMP. MÍN.",
+            round(temp_min, 1),
+            "°C",
+            selected_date.strftime("%d/%m/%Y"),
+            "#29B6F6"
+        )
+
+    with k3:
+
+        metric_card(
+            "UMIDADE MÁX.",
+            round(umi_max, 1),
+            "%",
+            selected_date.strftime("%d/%m/%Y"),
+            "#43A047"
+        )
+
+    with k4:
+
+        metric_card(
+            "PRECIPITAÇÃO",
+            round(chuva_total, 1),
+            "mm",
+            "Acumulado diário",
+            "#26C6DA"
+        )
+
+    with k5:
+
+        metric_card(
+            "VENTO MÉDIO",
+            round(vento_med, 1),
+            "m/s",
+            "Velocidade média",
+            "#FB8C00"
+        )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # =========================
+    # GRÁFICOS
+    # =========================
+
+    c1, c2 = st.columns(2)
+
+    # =========================
+    # TEMPERATURA
+    # =========================
+
+    with c1:
+
+        fig_temp = go.Figure()
+
+        fig_temp.add_trace(
+            go.Scatter(
+                x=df_day["hora"],
+                y=df_day["temp_max"],
+
+                mode="markers+lines",
+
+                name="Temp. Máx.",
+
+                line=dict(
+                    color="#EF4444",
+                    width=3,
+                    shape="spline"
+                )
+            )
+        )
+
+        fig_temp.add_trace(
+            go.Scatter(
+                x=df_day["hora"],
+                y=df_day["temp_min"],
+
+                mode="markers+lines",
+
+                name="Temp. Mín.",
+
+                line=dict(
+                    color="#22B8CF",
+                    width=3,
+                    shape="spline"
+                )
+            )
+        )
+
+        fig_temp.update_layout(
+
+            title="TEMPERATURA HORÁRIA",
+
+            height=350,
+
+            paper_bgcolor="white",
+            plot_bgcolor="white",
+
+            hovermode="x unified"
+        )
+
+        st.plotly_chart(
+            fig_temp,
+            use_container_width=True
+        )
+
+    # =========================
+    # UMIDADE
+    # =========================
+
+    with c2:
+
+        fig_umid = go.Figure()
+
+        fig_umid.add_trace(
+            go.Scatter(
+                x=df_day["hora"],
+                y=df_day["umi_max"],
+
+                mode="markers+lines",
+
+                name="Umidade",
+
+                line=dict(
+                    color="#16A34A",
+                    width=3,
+                    shape="spline"
+                ),
+
+                fill="tozeroy",
+
+                fillcolor="rgba(22,163,74,.08)"
+            )
+        )
+
+        fig_umid.update_layout(
+
+            title="UMIDADE HORÁRIA",
+
+            height=350,
+
+            paper_bgcolor="white",
+            plot_bgcolor="white",
+
+            hovermode="x unified"
+        )
+
+        st.plotly_chart(
+            fig_umid,
+            use_container_width=True
+        )
+
+    # =========================
+    # PRECIPITAÇÃO + ROSA
+    # =========================
+
+    c3, c4 = st.columns(2)
+
+    # PRECIPITAÇÃO
+    with c3:
+
+        fig_prec = go.Figure()
+
+        fig_prec.add_trace(
+            go.Bar(
+                x=df_day["hora"],
+                y=df_day["chuva"],
+
+                marker=dict(
+                    color="#6EC6D1"
+                )
+            )
+        )
+
+        fig_prec.update_layout(
+
+            title="PRECIPITAÇÃO HORÁRIA",
+
+            height=350,
+
+            paper_bgcolor="white",
+            plot_bgcolor="white"
+        )
+
+        st.plotly_chart(
+            fig_prec,
+            use_container_width=True
+        )
+
+    # ROSA DOS VENTOS
+    with c4:
+
+        direcoes = [
+            "N", "NE", "E", "SE",
+            "S", "SO", "O", "NO"
+        ]
+
+        freq = []
+
+        for d in direcoes:
+
+            valor = len(
+                df_day[
+                    df_day["vento_dir"]
+                    .astype(str)
+                    .str.upper()
+                    .str.contains(d, na=False)
+                ]
+            )
+
+            freq.append(valor)
+
+        fig_vento = go.Figure()
+
+        fig_vento.add_trace(
+            go.Barpolar(
+
+                r=freq,
+
+                theta=direcoes,
+
+                marker=dict(
+                    color="#6EC6D1"
+                )
+            )
+        )
+
+        fig_vento.update_layout(
+
+            title="ROSA DOS VENTOS",
+
+            height=350,
+
+            paper_bgcolor="white",
+            plot_bgcolor="white"
+        )
+
+        st.plotly_chart(
+            fig_vento,
+            use_container_width=True
+        )
+

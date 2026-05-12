@@ -103,17 +103,18 @@ button[kind="header"] {
   position: relative;
 }
 
-/* =========================
-   HOVER
-========================= */
-.submenu-item:hover {
-  background: linear-gradient(
-    90deg,
-    #A7DCE5,
-    #F5FBFC,
-    #BFEEDD
-  );
+/* ITENS */
+.submenu-item {
+  padding: 8px 10px;
+  border-radius: 10px;
+  margin: 4px 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
 
+/* 🔥 HOVER COM FUNDO BRANCO */
+.submenu-item:hover {
+  background: #FFFFFF;
   font-weight: 600;
   transform: translateX(3px);
 }
@@ -122,18 +123,18 @@ button[kind="header"] {
    ACTIVE (PÁGINA ATUAL)
 ========================= */
 .submenu-item.active {
-  background: linear-gradient(
-    90deg,
-    #A7DCE5,
-    #F5FBFC,
-    #BFEEDD
-  );
+
+  background: white;
 
   font-weight: 700;
 
-  /* evita “pulo” do layout */
   border-left: 4px solid #1E9B4E;
+
   padding-left: 6px;
+
+  transform: translateX(3px);
+
+  box-shadow: 0 2px 6px rgba(0,0,0,.06);
 }
 
 /* =========================
@@ -320,21 +321,7 @@ button[kind="header"] {
   max-height: 200px;
 }
 
-/* ITENS */
-.submenu-item {
-  padding: 8px 10px;
-  border-radius: 10px;
-  margin: 4px 0;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
 
-/* 🔥 HOVER COM FUNDO BRANCO */
-.submenu-item:hover {
-  background: #FFFFFF;
-  font-weight: 600;
-  transform: translateX(3px);
-}
 
 /* =========================
    TÍTULO

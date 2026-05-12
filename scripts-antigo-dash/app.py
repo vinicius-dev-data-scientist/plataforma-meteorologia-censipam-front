@@ -55,6 +55,11 @@ def render_page(page):
         from pages import inmet_dash
         inmet_dash.render()
 
+    elif page == "inmet_ranking":
+
+        from pages import inmet_ranking
+        inmet_ranking.render()
+
     elif page == "radar":
 
         from services import rads_obs_service
