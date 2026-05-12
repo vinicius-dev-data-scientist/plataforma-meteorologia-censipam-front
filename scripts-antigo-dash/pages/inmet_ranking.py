@@ -14,8 +14,16 @@ stations = {
 
     "MANAUS (A101)": "MANAUS.csv",
     "BARCELOS (A128)": "BARCELOS.csv",
+    "BOCA DO ACRE (A110)": "BOCA_DO_ACRE.csv",
     "COARI (A117)": "COARI.csv",
+    "HUMAITÁ (A112)": "HUMAITA.csv",
+    "ITACOATIARA (A121)": "ITACOATIARA.csv",
+    "MANACAPURU (A119)": "MANACAPURU.csv",
+    "MANICORÉ (A133)": "MANICORE.csv",
+    "NOVA ARIPUANÃ (A144)": "NOVA_ARIPUANÃ.csv",
     "PARINTINS (A123)": "PARINTINS.csv",
+    "SÃO GABRIEL DA CACHOEIRA (A134)": "SGCACHOEIRA.csv",
+    "URUCARÁ (A124)": "URUCARÁ.csv"
 }
 
 # =========================

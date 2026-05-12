@@ -14,8 +14,16 @@ stations = {
 
     "MANAUS (A101)": "MANAUS.csv",
     "BARCELOS (A128)": "BARCELOS.csv",
+    "BOCA DO ACRE (A110)": "BOCA_DO_ACRE.csv",
     "COARI (A117)": "COARI.csv",
+    "HUMAITÁ (A112)": "HUMAITA.csv",
+    "ITACOATIARA (A121)": "ITACOATIARA.csv",
+    "MANACAPURU (A119)": "MANACAPURU.csv",
+    "MANICORÉ (A133)": "MANICORE.csv",
+    "NOVA ARIPUANÃ (A144)": "NOVA_ARIPUANÃ.csv",
     "PARINTINS (A123)": "PARINTINS.csv",
+    "SÃO GABRIEL DA CACHOEIRA (A134)": "SGCACHOEIRA.csv",
+    "URUCARÁ (A124)": "URUCARÁ.csv"
 }
 
 # =========================
@@ -98,11 +106,28 @@ def render():
     </div>
     """, unsafe_allow_html=True)
 
+        # =========================
+    # LOAD INICIAL
+    # =========================
+
+    default_station = list(stations.keys())[0]
+
+    default_file = stations[default_station]
+
+    df_default = load_station_data(default_file)
+
     # =========================
     # FILTROS
     # =========================
 
-    c1, c2, c3, c4 = st.columns([2,2,1,1])
+    c1, c2, c3, c4 = st.columns(
+        [1.5, 2.2, 1.2, 1.8],
+        gap="medium"
+    )
+
+    # =========================
+    # ESTAÇÃO
+    # =========================
 
     with c1:
 
@@ -113,8 +138,13 @@ def render():
 
         station_name = st.selectbox(
             "",
-            list(stations.keys())
+            list(stations.keys()),
+            label_visibility="collapsed"
         )
+
+    # =========================
+    # PRODUTO
+    # =========================
 
     with c2:
 
@@ -130,8 +160,13 @@ def render():
                 "Eventos Extremos",
                 "Registro Diário"
             ],
-            horizontal=True
+            horizontal=True,
+            label_visibility="collapsed"
         )
+
+    # =========================
+    # PERÍODO
+    # =========================
 
     with c3:
 
@@ -145,21 +180,77 @@ def render():
             [
                 "Últimos 30 dias",
                 "Últimos 15 dias",
-                "Este mês"
-            ]
+                "Este mês",
+                "Personalizado"
+            ],
+            label_visibility="collapsed"
         )
+
+    # =========================
+    # CALENDÁRIOS DINÂMICOS
+    # =========================
+
+    selected_date = None
+    start_date = None
+    end_date = None
 
     with c4:
 
-        st.markdown(
-            '<div class="filter-label">DATA</div>',
-            unsafe_allow_html=True
-        )
+        # =========================
+        # REGISTRO DIÁRIO
+        # =========================
 
-        selected_date = st.date_input(
-            "",
-            format="DD/MM/YYYY"
-        )
+        if produto == "Registro Diário":
+
+            st.markdown(
+                '<div class="filter-label">DATA</div>',
+                unsafe_allow_html=True
+            )
+
+            selected_date = st.date_input(
+                "",
+                value=df_default["data"].max().date(),
+                format="DD/MM/YYYY",
+                label_visibility="collapsed"
+            )
+
+        # =========================
+        # PERSONALIZADO
+        # =========================
+
+        elif period == "Personalizado":
+
+            cc1, cc2 = st.columns(2)
+
+            with cc1:
+
+                st.markdown(
+                    '<div class="filter-label">INÍCIO</div>',
+                    unsafe_allow_html=True
+                )
+
+                start_date = st.date_input(
+                    "",
+                    value=df_default["data"].min().date(),
+                    key="start_date",
+                    format="DD/MM/YYYY",
+                    label_visibility="collapsed"
+                )
+
+            with cc2:
+
+                st.markdown(
+                    '<div class="filter-label">FIM</div>',
+                    unsafe_allow_html=True
+                )
+
+                end_date = st.date_input(
+                    "",
+                    value=df_default["data"].max().date(),
+                    key="end_date",
+                    format="DD/MM/YYYY",
+                    label_visibility="collapsed"
+                )
 
     # =========================
     # LOAD DATA
@@ -169,13 +260,24 @@ def render():
 
     df = load_station_data(file_name)
 
-    df = filter_period(df, period)
+   # =========================
+    # FILTRO DE PERÍODO
+    # =========================
 
-    if df.empty:
+    if produto != "Registro Diário":
 
-        st.warning("Sem dados disponíveis.")
-        return
+        if period == "Personalizado":
 
+            if start_date and end_date:
+
+                df = df[
+                    (df["data"].dt.date >= start_date) &
+                    (df["data"].dt.date <= end_date)
+                ]
+
+        else:
+
+            df = filter_period(df, period)
     # =========================
     # PRODUTOS
     # =========================
@@ -558,7 +660,7 @@ def render_resumo(df, station_name, period):
             use_container_width=True
         )
 
-        # =========================
+    # =========================
     # PRECIPITAÇÃO + ROSA DOS VENTOS
     # =========================
 
