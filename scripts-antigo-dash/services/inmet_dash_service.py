@@ -1,5 +1,10 @@
 import os
 import pandas as pd
+import streamlit as st
+
+# =========================
+# PATHS
+# =========================
 
 BASE_DIR = os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))
@@ -14,6 +19,7 @@ DATASET_DIR = os.path.join(
 # =========================
 # MAPA DE COLUNAS
 # =========================
+
 COLUMN_MAP = {
 
     "Data": "data",
@@ -45,99 +51,249 @@ COLUMN_MAP = {
 }
 
 # =========================
+# COLUNAS NUMÉRICAS
+# =========================
+
+NUMERIC_COLS = [
+
+    "temp_inst",
+    "temp_max",
+    "temp_min",
+
+    "umi_inst",
+    "umi_max",
+    "umi_min",
+
+    "orvalho_inst",
+    "orvalho_max",
+    "orvalho_min",
+
+    "pressao_inst",
+    "pressao_max",
+    "pressao_min",
+
+    "vento_vel",
+    "vento_raj",
+
+    "radiacao",
+    "chuva"
+]
+
+# =========================
 # LOAD CSV
 # =========================
+
+@st.cache_data(show_spinner=False)
 def load_station_data(station_file):
 
-    path = os.path.join(DATASET_DIR, station_file)
+    path = os.path.join(
+        DATASET_DIR,
+        station_file
+    )
+
+    # =========================
+    # ARQUIVO NÃO EXISTE
+    # =========================
 
     if not os.path.exists(path):
+
+        st.warning(
+            f"Arquivo não encontrado: {station_file}"
+        )
+
         return pd.DataFrame()
 
-    # CSV INMET
-    df = pd.read_csv(
-        path,
-        sep=None,
-        engine="python",
-        encoding="utf-8-sig"
-    )
+    try:
 
-    df.columns = df.columns.str.strip()
+        # =========================
+        # LEITURA CSV
+        # =========================
 
-    # remove colunas inúteis
-    for col in ["Unnamed: 0", "index"]:
-        if col in df.columns:
-            df.drop(columns=[col], inplace=True)
+        df = pd.read_csv(
+            path,
+            sep=None,
+            engine="python",
+            encoding="utf-8-sig"
+        )
 
-    print("ANTES:")
-    print(df.columns.tolist())
+        # =========================
+        # LIMPA COLUNAS
+        # =========================
 
-    df.rename(columns=COLUMN_MAP, inplace=True)
+        df.columns = (
+            df.columns
+            .str.strip()
+        )
 
-    print("DEPOIS:")
-    print(df.columns.tolist())
+        # remove colunas inúteis
+        useless_cols = [
+            "Unnamed: 0",
+            "index"
+        ]
 
-    df["data"] = pd.to_datetime(
-        df["data"],
-        errors="coerce"
-    )
+        existing_cols = [
+            col for col in useless_cols
+            if col in df.columns
+        ]
 
-    # converte numéricos
-    numeric_cols = [
-        "temp_inst",
-        "temp_max",
-        "temp_min",
-        "umi_inst",
-        "umi_max",
-        "umi_min",
-        "vento_vel",
-        "vento_dir",
-        "vento_raj",
-        "chuva"
-    ]
+        if existing_cols:
 
-    for col in numeric_cols:
-
-        if col in df.columns:
-
-            df[col] = (
-                df[col]
-                .astype(str)
-                .str.replace(",", ".")
+            df.drop(
+                columns=existing_cols,
+                inplace=True
             )
 
-            df[col] = pd.to_numeric(
-                df[col],
+        # =========================
+        # RENOMEIA
+        # =========================
+
+        df.rename(
+            columns=COLUMN_MAP,
+            inplace=True
+        )
+
+        # =========================
+        # DATA + HORA
+        # =========================
+
+        if "data" in df.columns and "hora" in df.columns:
+
+            # limpa hora
+            df["hora"] = (
+                df["hora"]
+                .astype(str)
+                .str.replace(":", "", regex=False)
+                .str.zfill(4)
+            )
+
+            # junta data + hora
+            df["datetime"] = pd.to_datetime(
+                df["data"].astype(str) + " " +
+                df["hora"].str[:2] + ":" +
+                df["hora"].str[2:],
                 errors="coerce"
             )
 
-    return df
+            # substitui data
+            df["data"] = df["datetime"]
 
+        # =========================
+        # NUMÉRICOS
+        # =========================
+
+        for col in NUMERIC_COLS:
+
+            if col in df.columns:
+
+                df[col] = (
+
+                    df[col]
+
+                    .astype(str)
+
+                    .str.replace(
+                        ",",
+                        ".",
+                        regex=False
+                    )
+
+                    .str.replace(
+                        "None",
+                        "",
+                        regex=False
+                    )
+
+                    .str.replace(
+                        "--",
+                        "",
+                        regex=False
+                    )
+
+                    .str.strip()
+                )
+
+                df[col] = pd.to_numeric(
+                    df[col],
+                    errors="coerce"
+                )
+
+        # =========================
+        # ORDENA
+        # =========================
+
+        if "data" in df.columns:
+
+            df = df.sort_values(
+                "data"
+            )
+
+        # =========================
+        # RESET INDEX
+        # =========================
+
+        df.reset_index(
+            drop=True,
+            inplace=True
+        )
+
+        return df
+
+    except Exception as e:
+
+        st.error(
+            f"Erro ao carregar {station_file}: {e}"
+        )
+
+        return pd.DataFrame()
 
 # =========================
 # FILTRO DE PERÍODO
 # =========================
+
 def filter_period(df, period):
 
     if df.empty:
+
+        return df
+
+    if "data" not in df.columns:
+
         return df
 
     today = df["data"].max()
+
+    # =========================
+    # ÚLTIMOS 30 DIAS
+    # =========================
 
     if period == "Últimos 30 dias":
 
         start = today - pd.Timedelta(days=30)
 
+    # =========================
+    # ÚLTIMOS 15 DIAS
+    # =========================
+
     elif period == "Últimos 15 dias":
 
         start = today - pd.Timedelta(days=15)
+
+    # =========================
+    # ESTE MÊS
+    # =========================
 
     elif period == "Este mês":
 
         start = today.replace(day=1)
 
+    # =========================
+    # SEM FILTRO
+    # =========================
+
     else:
 
         return df
 
-    return df[df["data"] >= start]
+    return df[
+        df["data"] >= start
+    ]

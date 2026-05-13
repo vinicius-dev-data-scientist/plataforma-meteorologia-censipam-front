@@ -3,7 +3,7 @@ import streamlit as st
 from components.style import load_css
 from components.sidebar import render_sidebar
 from components.header import render_header
-from pages import inmet_dash
+from pages import inmet_dash_plot
 
 # =========================
 # CONFIG
@@ -52,8 +52,8 @@ def render_page(page):
 
     elif page == "inmet":
 
-        from pages import inmet_dash
-        inmet_dash.render()
+        from pages import inmet_dash_plot
+        inmet_dash_plot.render()
 
     elif page == "inmet_ranking":
 
