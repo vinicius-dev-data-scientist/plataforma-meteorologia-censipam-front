@@ -111,8 +111,8 @@ def render():
     # FILTROS
     # =========================
 
-    c1, c2, c3, c4 = st.columns(
-        [1.5, 2.2, 1.2, 1.8],
+    c1, c2, c3 = st.columns(
+        [1.5, 2.2, 2.3],
         gap="medium"
     )
 
@@ -156,10 +156,6 @@ def render():
         )
 
     # =========================
-    # PERÍODO
-    # =========================
-
-    # =========================
     # LOAD DATA
     # =========================
 
@@ -167,7 +163,6 @@ def render():
 
     df = load_station_data(file_name)
 
-    # dataframe vazio
     if df.empty:
 
         st.warning(
@@ -175,31 +170,9 @@ def render():
         )
         return
 
-    with c3:
-
-        st.markdown(
-            '<div class="filter-label">PERÍODO</div>',
-            unsafe_allow_html=True
-        )
-
-        period = st.selectbox(
-            "",
-            [
-                "Últimos 30 dias",
-                "Últimos 15 dias",
-                "Este mês",
-                "Personalizado"
-            ],
-            label_visibility="collapsed"
-        )
-
     # =========================
-    # CALENDÁRIOS DINÂMICOS
+    # DATAS DISPONÍVEIS
     # =========================
-
-    selected_date = None
-    start_date = None
-    end_date = None
 
     min_date = df["data"].min().date()
     max_date = df["data"].max().date()
@@ -211,7 +184,15 @@ def render():
         )
         return
 
-    with c4:
+    selected_date = None
+    start_date = None
+    end_date = None
+
+    # =========================
+    # FILTROS DE DATA
+    # =========================
+
+    with c3:
 
         # =========================
         # REGISTRO DIÁRIO
@@ -234,20 +215,17 @@ def render():
             )
 
         # =========================
-        # PERSONALIZADO
+        # RESUMO + EXTREMOS
         # =========================
 
-        elif (
-            produto == "Resumo Diário"
-            and period == "Personalizado"
-        ):
+        else:
 
             cc1, cc2 = st.columns(2)
 
             with cc1:
 
                 st.markdown(
-                    '<div class="filter-label">INÍCIO</div>',
+                    '<div class="filter-label">DATA INÍCIO</div>',
                     unsafe_allow_html=True
                 )
 
@@ -264,7 +242,7 @@ def render():
             with cc2:
 
                 st.markdown(
-                    '<div class="filter-label">FIM</div>',
+                    '<div class="filter-label">DATA FIM</div>',
                     unsafe_allow_html=True
                 )
 
@@ -279,47 +257,42 @@ def render():
                 )
 
     # =========================
-    # FILTRO DE PERÍODO
+    # FILTRO POR DATA
     # =========================
 
     if produto != "Registro Diário":
 
-        if period == "Personalizado":
+        if start_date and end_date:
 
-            if start_date and end_date:
+            df = df[
+                (df["data"].dt.date >= start_date) &
+                (df["data"].dt.date <= end_date)
+            ]
 
-                df = df[
-                    (df["data"].dt.date >= start_date) &
-                    (df["data"].dt.date <= end_date)
-                ]
+        # =========================
+        # PRODUTOS
+        # =========================
 
-        else:
+        if produto == "Resumo Diário":
 
-            df = filter_period(df, period)
+            render_resumo(
+                df,
+                station_name,
+                start_date,
+                end_date
+            )
 
-    # =========================
-    # PRODUTOS
-    # =========================
+        elif produto == "Eventos Extremos":
 
-    if produto == "Resumo Diário":
+            render_extremos(df)
 
-        render_resumo(
-            df,
-            station_name,
-            period
-        )
+        elif produto == "Registro Diário":
 
-    elif produto == "Eventos Extremos":
-
-        render_extremos(df)
-
-    elif produto == "Registro Diário":
-
-        render_registro_diario(
-            df,
-            selected_date,
-            station_name
-        )
+            render_registro_diario(
+                df,
+                selected_date,
+                station_name
+            )
 
 
 # =========================
@@ -384,7 +357,12 @@ def process_wind_rose(df):
     return direcoes, freq, vel_media
 
 
-def render_resumo(df, station_name, period):
+def render_resumo(
+    df,
+    station_name,
+    start_date,
+    end_date
+):
 
     # =========================
     # REMOVE NaN
@@ -470,7 +448,11 @@ def render_resumo(df, station_name, period):
     # GRÁFICOS
     # =========================
 
-    period_label = period.replace("Últimos ", "").replace(" dias", " dias")
+    period_label = (
+        f"{start_date.strftime('%d/%m/%Y')}"
+        f" → "
+        f"{end_date.strftime('%d/%m/%Y')}"
+    )
 
     cidade = station_name.split(" (")[0].title()
 
