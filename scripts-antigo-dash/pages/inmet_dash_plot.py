@@ -21,7 +21,7 @@ stations = {
     "ITACOATIARA (A121)": "ITACOATIARA.csv",
     "MANACAPURU (A119)": "MANACAPURU.csv",
     "MANICORÉ (A133)": "MANICORE.csv",
-    "NOVA ARIPUANÃ (A144)": "NOVA_ARIPUANÃ.csv",
+    "NOVO ARIPUANÃ (A144)": "NOVO_ARIPUANÃ.csv",
     "PARINTINS (A123)": "PARINTINS.csv",
     "SÃO GABRIEL DA CACHOEIRA (A134)": "SGCACHOEIRA.csv",
     "URUCARÁ (A124)": "URUCARÁ.csv"
@@ -328,6 +328,36 @@ def render():
 
 def process_wind_rose(df):
 
+    # =========================
+    # CONVERTE GRAUS -> DIREÇÃO
+    # =========================
+
+    def grau_para_direcao(grau):
+
+        if pd.isna(grau):
+            return None
+
+        grau = float(grau)
+
+        setores = [
+            "N", "NE", "E", "SE",
+            "S", "SO", "O", "NO"
+        ]
+
+        indice = int((grau + 22.5) // 45) % 8
+
+        return setores[indice]
+
+    # =========================
+    # DIREÇÃO CONVERTIDA
+    # =========================
+
+    df = df.copy()
+
+    df["dir_cardinal"] = df["vento_dir"].apply(
+        grau_para_direcao
+    )
+
     direcoes = [
         "N", "NE", "E", "SE",
         "S", "SO", "O", "NO"
@@ -336,16 +366,10 @@ def process_wind_rose(df):
     freq = []
     vel_media = []
 
-    vento_dir = (
-        df["vento_dir"]
-        .astype(str)
-        .str.upper()
-    )
-
     for d in direcoes:
 
         subset = df[
-            vento_dir.str.fullmatch(d, na=False)
+            df["dir_cardinal"] == d
         ]
 
         freq.append(len(subset))
@@ -970,6 +994,7 @@ def render_registro_diario(
     df_day = df[
         df["data"].dt.date == selected_date
     ]
+    #st.write(df_day["vento_dir"].unique())
 
     df_day = df_day.copy()
 
@@ -1106,7 +1131,15 @@ def render_registro_diario(
 
         fig_temp.update_layout(
 
-            title="TEMPERATURA HORÁRIA",
+            title=dict(
+                text="TEMPERATURA HORÁRIA (°C)",
+                x=0,
+
+                font=dict(
+                    size=15,
+                    color="#374151"
+                )
+            ),
 
             height=350,
 
@@ -1114,9 +1147,59 @@ def render_registro_diario(
             plot_bgcolor="white",
 
             hovermode="x unified",
+
+            legend=dict(
+                orientation="h",
+                y=1.12,
+                x=0
+            ),
+
+            annotations=[
+
+                dict(
+                    text=f"{station_name.split(' (')[0].title()} · {selected_date.strftime('%d/%m/%Y')}",
+
+                    x=1,
+                    y=1.16,
+
+                    xref="paper",
+                    yref="paper",
+
+                    xanchor="right",
+
+                    showarrow=False,
+
+                    font=dict(
+                        size=11,
+                        color="#C62828"
+                    ),
+
+                    bgcolor="#FDECEC",
+
+                    bordercolor="#F5C2C2",
+                    borderwidth=1,
+
+                    borderpad=6
+                )
+            ],
+
+            margin=dict(
+                l=10,
+                r=10,
+                t=60,
+                b=10
+            ),
+
             xaxis=dict(
                 dtick=21600000,
-                tickformat="%H:%M"
+                tickformat="%H:%M",
+                showgrid=True,
+                gridcolor="rgba(0,0,0,.05)"
+            ),
+
+            yaxis=dict(
+                showgrid=True,
+                gridcolor="rgba(0,0,0,.05)"
             )
         )
 
@@ -1156,7 +1239,15 @@ def render_registro_diario(
 
         fig_umid.update_layout(
 
-            title="UMIDADE HORÁRIA",
+            title=dict(
+                text="UMIDADE HORÁRIA (%)",
+                x=0,
+
+                font=dict(
+                    size=15,
+                    color="#374151"
+                )
+            ),
 
             height=350,
 
@@ -1164,9 +1255,59 @@ def render_registro_diario(
             plot_bgcolor="white",
 
             hovermode="x unified",
+
+            legend=dict(
+                orientation="h",
+                y=1.12,
+                x=0
+            ),
+
+            annotations=[
+
+                dict(
+                    text=f"{station_name.split(' (')[0].title()} · {selected_date.strftime('%d/%m/%Y')}",
+
+                    x=1,
+                    y=1.16,
+
+                    xref="paper",
+                    yref="paper",
+
+                    xanchor="right",
+
+                    showarrow=False,
+
+                    font=dict(
+                        size=11,
+                        color="#166534"
+                    ),
+
+                    bgcolor="#DCFCE7",
+
+                    bordercolor="#86EFAC",
+                    borderwidth=1,
+
+                    borderpad=6
+                )
+            ],
+
+            margin=dict(
+                l=10,
+                r=10,
+                t=60,
+                b=10
+            ),
+
             xaxis=dict(
                 dtick=21600000,
-                tickformat="%H:%M"
+                tickformat="%H:%M",
+                showgrid=True,
+                gridcolor="rgba(0,0,0,.05)"
+            ),
+
+            yaxis=dict(
+                showgrid=True,
+                gridcolor="rgba(0,0,0,.05)"
             )
         )
 
@@ -1199,45 +1340,80 @@ def render_registro_diario(
 
         fig_prec.update_layout(
 
-            title="PRECIPITAÇÃO HORÁRIA",
+            title=dict(
+                text="PRECIPITAÇÃO HORÁRIA (MM)",
+                x=0,
+
+                font=dict(
+                    size=15,
+                    color="#374151"
+                )
+            ),
 
             height=350,
 
             paper_bgcolor="white",
             plot_bgcolor="white",
+
+            hovermode="x unified",
+
+            margin=dict(
+                l=10,
+                r=10,
+                t=60,
+                b=10
+            ),
+
+            annotations=[
+
+                dict(
+                    text=f"Total diário · {round(chuva_total,1)} mm",
+
+                    x=1,
+                    y=1.16,
+
+                    xref="paper",
+                    yref="paper",
+
+                    xanchor="right",
+
+                    showarrow=False,
+
+                    font=dict(
+                        size=11,
+                        color="#0F766E"
+                    ),
+
+                    bgcolor="#ECFEFF",
+
+                    bordercolor="#A5F3FC",
+                    borderwidth=1,
+
+                    borderpad=6
+                )
+            ],
+
             xaxis=dict(
                 dtick=21600000,
-                tickformat="%H:%M"
+                tickformat="%H:%M",
+                showgrid=False
+            ),
+
+            yaxis=dict(
+                title="mm",
+                showgrid=True,
+                gridcolor="rgba(0,0,0,.05)"
             )
         )
-
         st.plotly_chart(
-            fig_prec,
-            use_container_width=True
+                fig_prec,
+                use_container_width=True
         )
 
     # ROSA DOS VENTOS
     with c4:
 
-        direcoes = [
-            "N", "NE", "E", "SE",
-            "S", "SO", "O", "NO"
-        ]
-
-        freq = []
-
-        for d in direcoes:
-
-            valor = len(
-                df_day[
-                    df_day["vento_dir"]
-                    .astype(str)
-                    .str.upper()
-                    .str.contains(d, na=False)
-                ]
-            )
-
-            freq.append(valor)
+        direcoes, freq, vel_media = process_wind_rose(df_day)
 
         fig_vento = go.Figure()
 
@@ -1249,23 +1425,76 @@ def render_registro_diario(
                 theta=direcoes,
 
                 marker=dict(
-                    color="#6EC6D1"
-                )
+                    color=vel_media,
+
+                    colorscale=[
+                        [0, "#D8F3DC"],
+                        [0.5, "#52B69A"],
+                        [1, "#1D3557"]
+                    ],
+
+                    colorbar=dict(
+                        title="m/s"
+                    ),
+
+                    line=dict(
+                        color="white",
+                        width=1.5
+                    )
+                ),
+                hovertemplate=
+                "<b>%{theta}</b><br>" +
+                "Frequência: %{r}<br>" +
+                "Vel. Média: %{marker.color:.1f} m/s" +
+                "<extra></extra>"
             )
         )
 
         fig_vento.update_layout(
 
-            title="ROSA DOS VENTOS",
+            title=dict(
+                text="ROSA DOS VENTOS",
+                x=0,
+
+                font=dict(
+                    size=15,
+                    color="#374151"
+                )
+            ),
 
             height=350,
 
             paper_bgcolor="white",
-            plot_bgcolor="white"
+            plot_bgcolor="white",
+
+            polar=dict(
+
+                bgcolor="white",
+
+                radialaxis=dict(
+                    showticklabels=True,
+                    ticks="",
+                    gridcolor="rgba(0,0,0,.08)"
+                ),
+
+                angularaxis=dict(
+                    direction="clockwise",
+                    rotation=90
+                )
+            ),
+
+            margin=dict(
+                l=10,
+                r=10,
+                t=60,
+                b=10
+            ),
+
+            showlegend=False
         )
 
         st.plotly_chart(
-            fig_vento,
-            use_container_width=True
+                fig_vento,
+                use_container_width=True
         )
 
