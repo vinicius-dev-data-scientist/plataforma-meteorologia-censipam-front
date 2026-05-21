@@ -10,7 +10,6 @@ import streamlit as st
 from components.style import load_css
 from components.sidebar import render_sidebar
 from components.header import render_header
-from pages import inmet_dash_plot
 
 # =========================
 # CONFIG
@@ -61,6 +60,11 @@ def render_page(page):
 
         from services import merge_diario_cptec_service
         merge_diario_cptec_service.render()
+
+    elif page == "goes_monitoramento":
+
+         from pages import goes_monitoramento
+         goes_monitoramento.render()
 
     elif page == "inmet":
 

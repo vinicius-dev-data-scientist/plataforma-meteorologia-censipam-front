@@ -72,6 +72,11 @@ def render_sidebar():
                     class="submenu-item {'active' if active_page == 'merge_diario' else ''}">
                     Merge-CPTEC Diário
                     </a>
+                    <a href="?page=goes_monitoramento"
+                    target="_self"
+                    class="submenu-item {'active' if active_page == 'goes_monitoramento' else ''}">
+                    GOES - Imagens
+                    </a>
                 </div>
             </div>
             <div class="menu-item">
