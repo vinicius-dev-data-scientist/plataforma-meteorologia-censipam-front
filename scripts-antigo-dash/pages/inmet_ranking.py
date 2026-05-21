@@ -128,7 +128,7 @@ def render():
                 valor = df["vento_raj"].max()
 
                 unidade = "m/s"
-
+    
             ranking_data.append({
 
                 "cidade": cidade,

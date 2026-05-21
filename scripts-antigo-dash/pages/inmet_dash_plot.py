@@ -269,30 +269,30 @@ def render():
                 (df["data"].dt.date <= end_date)
             ]
 
-        # =========================
-        # PRODUTOS
-        # =========================
+    # =========================
+    # PRODUTOS
+    # =========================
 
-        if produto == "Resumo Diário":
+    if produto == "Resumo Diário":
 
-            render_resumo(
-                df,
-                station_name,
-                start_date,
-                end_date
-            )
+        render_resumo(
+            df,
+            station_name,
+            start_date,
+            end_date
+        )
 
-        elif produto == "Eventos Extremos":
+    elif produto == "Eventos Extremos":
 
-            render_extremos(df)
+        render_extremos(df)
 
-        elif produto == "Registro Diário":
+    elif produto == "Registro Diário":
 
-            render_registro_diario(
-                df,
-                selected_date,
-                station_name
-            )
+        render_registro_diario(
+            df,
+            selected_date,
+            station_name
+        )
 
 
 # =========================
