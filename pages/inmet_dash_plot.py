@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
+from babel.dates import format_date
 
 from services.inmet_dash_service import (
     load_station_data,
@@ -12,15 +13,19 @@ from services.inmet_dash_service import (
 # =========================
 
 stations = {
-
     "MANAUS (A101)": "MANAUS.csv",
+    "APUI (A113)": "APUI.csv",
+    "AUTAZES (A120)": "AUTAZES.csv",
     "BARCELOS (A128)": "BARCELOS.csv",
     "BOCA DO ACRE (A110)": "BOCA_DO_ACRE.csv",
     "COARI (A117)": "COARI.csv",
+    "EIRUNEPÉ (A132)": "EIRUNEPE.csv",
     "HUMAITÁ (A112)": "HUMAITA.csv",
     "ITACOATIARA (A121)": "ITACOATIARA.csv",
+    "LÁBREA (A111)": "LABREA.csv",
     "MANACAPURU (A119)": "MANACAPURU.csv",
     "MANICORÉ (A133)": "MANICORE.csv",
+    "MAUES (A122)": "MAUES.csv",
     "NOVO ARIPUANÃ (A144)": "NOVO_ARIPUANÃ.csv",
     "PARINTINS (A123)": "PARINTINS.csv",
     "SÃO GABRIEL DA CACHOEIRA (A134)": "SGCACHOEIRA.csv",
@@ -279,7 +284,8 @@ def render():
             df,
             station_name,
             start_date,
-            end_date
+            end_date,
+            produto
         )
 
     elif produto == "Eventos Extremos":
@@ -361,7 +367,8 @@ def render_resumo(
     df,
     station_name,
     start_date,
-    end_date
+    end_date,
+    produto
 ):
 
     # =========================
@@ -390,15 +397,142 @@ def render_resumo(
     # KPIs
     # =========================
 
+    # =====================================================
+    # DEFINIR MODO DE COMPARAÇÃO
+    # =====================================================
+
+    modo = "resumo"
+
+    # =====================================================
+    # FUNÇÃO AUXILIAR
+    # =====================================================
+
+    def obter_valores(serie, modo):
+
+        atual = serie.iloc[-1]
+
+        # ===============================================
+        # RESUMO DIÁRIO
+        # compara:
+        # data fim vs data início
+        # ===============================================
+
+        if modo == "resumo":
+
+            referencia = serie.iloc[0]
+            texto_ref  = "vs data inicial"
+
+        # ===============================================
+        # REGISTRO DIÁRIO
+        # compara:
+        # dia atual vs dia anterior
+        # ===============================================
+
+        else:
+
+            referencia = serie.iloc[-2]
+            texto_ref  = "vs dia anterior"
+
+        diff = atual - referencia
+
+        return atual, diff, texto_ref
+
+    # =====================================================
+    # FUNÇÃO FORMATAR
+    # =====================================================
+
+    def format_diff(
+        valor,
+        texto_ref,
+        unidade=""
+    ):
+
+        if valor > 0:
+
+            seta = "↑"
+
+        elif valor < 0:
+
+            seta = "↓"
+
+        else:
+
+            seta = "•"
+
+        return (
+            f"{seta} "
+            f"{valor:+.1f}{unidade} "
+            f"{texto_ref}"
+        )
+
+    # =====================================================
+    # CÁLCULOS
+    # =====================================================
+
+    temp_max_hoje, diff_temp_max, txt_ref = (
+        obter_valores(
+            temp_max_series,
+            modo
+        )
+    )
+
+    temp_min_hoje, diff_temp_min, _ = (
+        obter_valores(
+            temp_min_series,
+            modo
+        )
+    )
+
+    umi_hoje, diff_umi, _ = (
+        obter_valores(
+            umi_series,
+            modo
+        )
+    )
+
+    chuva_hoje, diff_chuva, _ = (
+        obter_valores(
+            chuva_series,
+            modo
+        )
+    )
+
+    # =====================================================
+    # VENTO
+    # usa velocidade máxima
+    # =====================================================
+
+    vento_hoje = vento_series.max()
+
+    if modo == "resumo":
+
+        vento_ref = vento_series.iloc[0]
+        txt_vento = "vs data inicial"
+
+    else:
+
+        vento_ref = vento_series.iloc[-2]
+        txt_vento = "vs dia anterior"
+
+    diff_vento = vento_hoje - vento_ref
+
+    # =====================================================
+    # CARDS
+    # =====================================================
+
     k1, k2, k3, k4, k5 = st.columns(5)
 
     with k1:
 
         metric_card(
             "TEMP. MÁX. HOJE",
-            round(temp_max_series.iloc[-1], 1),
+            round(temp_max_hoje, 1),
             "°C",
-            "↑ +1.8°C vs ontem",
+            format_diff(
+                diff_temp_max,
+                txt_ref,
+                "°C"
+            ),
             "#E53935"
         )
 
@@ -406,9 +540,13 @@ def render_resumo(
 
         metric_card(
             "TEMP. MÍN. HOJE",
-            round(temp_min_series.iloc[-1], 1),
+            round(temp_min_hoje, 1),
             "°C",
-            "↓ −0.5°C vs ontem",
+            format_diff(
+                diff_temp_min,
+                txt_ref,
+                "°C"
+            ),
             "#29B6F6"
         )
 
@@ -416,9 +554,13 @@ def render_resumo(
 
         metric_card(
             "UMIDADE MÁX.",
-            round(umi_series.iloc[-1], 1),
+            round(umi_hoje, 1),
             "%",
-            "típico para abril/AM",
+            format_diff(
+                diff_umi,
+                txt_ref,
+                "%"
+            ),
             "#43A047"
         )
 
@@ -426,19 +568,27 @@ def render_resumo(
 
         metric_card(
             "PREC. 24 H",
-            round(chuva_series.iloc[-1], 1),
+            round(chuva_hoje, 1),
             "mm",
-            "↑ acima da média",
+            format_diff(
+                diff_chuva,
+                txt_ref,
+                " mm"
+            ),
             "#26C6DA"
         )
 
     with k5:
 
         metric_card(
-            "VEL. VENTO",
-            round(vento_series.iloc[-1], 1),
+            "VEL. VENTO MÁX.",
+            round(vento_hoje, 1),
             "m/s",
-            f"Raj. {latest['vento_raj']:.1f} m/s",
+            format_diff(
+                diff_vento,
+                txt_vento,
+                " m/s"
+            ),
             "#FB8C00"
         )
 
@@ -449,9 +599,9 @@ def render_resumo(
     # =========================
 
     period_label = (
-        f"{start_date.strftime('%d/%m/%Y')}"
+        f"{format_date(start_date, format='dd/MMM/yyyy', locale='pt_BR')}"
         f" → "
-        f"{end_date.strftime('%d/%m/%Y')}"
+        f"{format_date(end_date, format='dd/MMM/yyyy', locale='pt_BR')}"
     )
 
     cidade = station_name.split(" (")[0].title()
@@ -574,7 +724,10 @@ def render_resumo(
             annotations=[
 
                 dict(
-                    text=f"{period_label} · {cidade}",
+                    text=(
+                        f"{period_label} · "
+                        f"{cidade}"
+                    ),
 
                     x=1,
                     y=1.16,
@@ -608,6 +761,7 @@ def render_resumo(
             ),
 
             xaxis=dict(
+                tickformat="%b\n%Y",
                 showgrid=True,
                 gridcolor="rgba(0,0,0,.05)"
             ),
@@ -616,11 +770,14 @@ def render_resumo(
                 showgrid=True,
                 gridcolor="rgba(0,0,0,.05)"
             )
-        )
+        ),
+
+        config = {"locale": "pt-BR"},
 
         st.plotly_chart(
             fig_temp,
-            use_container_width=True
+            use_container_width=True,
+            config=config
         )
 
     # =========================
@@ -686,7 +843,10 @@ def render_resumo(
             annotations=[
 
                 dict(
-                    text=f"{period_label} · {cidade}",
+                    text=(
+                        f"{period_label} · "
+                        f"{cidade}"
+                    ),
 
                     x=1,
                     y=1.16,
@@ -720,6 +880,7 @@ def render_resumo(
             ),
 
             xaxis=dict(
+                tickformat="%b\n%Y",
                 showgrid=True,
                 gridcolor="rgba(0,0,0,.05)"
             ),
@@ -732,7 +893,10 @@ def render_resumo(
 
         st.plotly_chart(
             fig_umid,
-            use_container_width=True
+            use_container_width=True,
+            config={
+                "locale": "pt_BR"
+            }
         )
 
     # =========================
@@ -794,7 +958,10 @@ def render_resumo(
             annotations=[
 
                 dict(
-                    text=f"{period_label} · Total {total_chuva} mm",
+                    text=(
+                        f"{period_label} · "
+                        f"Total {total_chuva:.1f} mm"
+                    ),
 
                     x=1,
                     y=1.16,
@@ -828,7 +995,9 @@ def render_resumo(
             ),
 
             xaxis=dict(
-                showgrid=False
+                tickformat="%b\n%Y",
+                showgrid=True,
+                gridcolor="rgba(0,0,0,.05)"
             ),
 
             yaxis=dict(
@@ -840,7 +1009,10 @@ def render_resumo(
 
         st.plotly_chart(
             fig_prec,
-            use_container_width=True
+            use_container_width=True,
+            config={
+                "locale": "pt_BR"
+            }
         )
 
     # =========================
@@ -864,9 +1036,12 @@ def render_resumo(
                     color=vel_media,
 
                     colorscale=[
-                        [0, "#D8F3DC"],
-                        [0.5, "#52B69A"],
-                        [1, "#1D3557"]
+                        [0.0, "#F6F5C9"],
+                        [0.2, "#DDECB2"],
+                        [0.4, "#9ED9C3"],
+                        [0.6, "#5CB7D6"],
+                        [0.8, "#2F6DB3"],
+                        [1.0, "#1B1F6B"]
                     ],
 
                     colorbar=dict(
@@ -934,7 +1109,10 @@ def render_resumo(
 
         st.plotly_chart(
             fig_vento,
-            use_container_width=True
+            use_container_width=True,
+            config={
+                "locale": "pt_BR"
+            }
         )
 
 def render_extremos(df):
@@ -1003,7 +1181,83 @@ def render_registro_diario(
 
     chuva_total = df_day["chuva"].sum()
 
-    vento_med = df_day["vento_vel"].mean()
+    vento_max = df_day["vento_vel"].max()
+
+    # =========================
+    # DIA ANTERIOR
+    # =========================
+
+    previous_date = (
+        pd.to_datetime(selected_date)
+        - pd.Timedelta(days=1)
+    ).date()
+
+    df_prev = df[
+        df["data"].dt.date == previous_date
+    ]
+
+    # =========================
+    # VALORES DIA ANTERIOR
+    # =========================
+
+    if not df_prev.empty:
+
+        temp_max_prev = df_prev["temp_max"].max()
+        temp_min_prev = df_prev["temp_min"].min()
+
+        umi_prev = df_prev["umi_max"].max()
+
+        chuva_prev = df_prev["chuva"].sum()
+
+        vento_prev = df_prev["vento_vel"].max()
+
+    else:
+
+        temp_max_prev = temp_max
+        temp_min_prev = temp_min
+
+        umi_prev = umi_max
+
+        chuva_prev = chuva_total
+
+        vento_prev = vento_max
+
+    # =========================
+    # DIFERENÇAS
+    # =========================
+
+    diff_temp_max = temp_max - temp_max_prev
+    diff_temp_min = temp_min - temp_min_prev
+
+    diff_umi = umi_max - umi_prev
+
+    diff_chuva = chuva_total - chuva_prev
+
+    diff_vento = vento_max - vento_prev
+
+    # =========================
+    # FORMATADOR
+    # =========================
+
+    def format_diff(valor, unidade=""):
+
+        if valor > 0:
+
+            seta = "↑"
+
+        elif valor < 0:
+
+            seta = "↓"
+
+        else:
+
+            seta = "•"
+
+        return (
+            f"{seta} "
+            f"{valor:+.1f}{unidade} "
+            f"vs dia anterior"
+        )
 
     # =========================
     # KPIs
@@ -1017,7 +1271,7 @@ def render_registro_diario(
             "TEMP. MÁX.",
             round(temp_max, 1),
             "°C",
-            selected_date.strftime("%d/%m/%Y"),
+            format_diff(diff_temp_max, "°C"),
             "#E53935"
         )
 
@@ -1027,7 +1281,7 @@ def render_registro_diario(
             "TEMP. MÍN.",
             round(temp_min, 1),
             "°C",
-            selected_date.strftime("%d/%m/%Y"),
+            format_diff(diff_temp_min, "°C"),
             "#29B6F6"
         )
 
@@ -1037,7 +1291,7 @@ def render_registro_diario(
             "UMIDADE MÁX.",
             round(umi_max, 1),
             "%",
-            selected_date.strftime("%d/%m/%Y"),
+            format_diff(diff_umi, "%"),
             "#43A047"
         )
 
@@ -1047,17 +1301,17 @@ def render_registro_diario(
             "PRECIPITAÇÃO",
             round(chuva_total, 1),
             "mm",
-            "Acumulado diário",
+            format_diff(diff_chuva, "mm"),
             "#26C6DA"
         )
 
     with k5:
 
         metric_card(
-            "VENTO MÉDIO",
-            round(vento_med, 1),
+            "VENTO MÁX.",
+            round(vento_max, 1),
             "m/s",
-            "Velocidade média",
+            format_diff(diff_vento, "m/s"),
             "#FB8C00"
         )
 
@@ -1139,7 +1393,10 @@ def render_registro_diario(
             annotations=[
 
                 dict(
-                    text=f"{station_name.split(' (')[0].title()} · {selected_date.strftime('%d/%m/%Y')}",
+                    text=(
+                        f"{station_name.split(' (')[0].title()} · "
+                        f"{format_date(selected_date, format='dd/MM/yyyy', locale='pt_BR')}"
+                    ),
 
                     x=1,
                     y=1.16,
@@ -1187,7 +1444,10 @@ def render_registro_diario(
 
         st.plotly_chart(
             fig_temp,
-            use_container_width=True
+            use_container_width=True,
+            config={
+                "locale": "pt_BR"
+            }
         )
 
     # =========================
@@ -1219,6 +1479,17 @@ def render_registro_diario(
             )
         )
 
+        y_min = max(
+            0,
+            df_day["umi_max"].min() - 10
+        )
+
+        y_max = min(
+            100,
+            df_day["umi_max"].max() + 5
+        )
+
+
         fig_umid.update_layout(
 
             title=dict(
@@ -1247,7 +1518,10 @@ def render_registro_diario(
             annotations=[
 
                 dict(
-                    text=f"{station_name.split(' (')[0].title()} · {selected_date.strftime('%d/%m/%Y')}",
+                    text=(
+                        f"{station_name.split(' (')[0].title()} · "
+                        f"{format_date(selected_date, format='dd/MM/yyyy', locale='pt_BR')}"
+                    ),
 
                     x=1,
                     y=1.16,
@@ -1288,6 +1562,7 @@ def render_registro_diario(
             ),
 
             yaxis=dict(
+                range=[y_min, y_max],
                 showgrid=True,
                 gridcolor="rgba(0,0,0,.05)"
             )
@@ -1295,7 +1570,10 @@ def render_registro_diario(
 
         st.plotly_chart(
             fig_umid,
-            use_container_width=True
+            use_container_width=True,
+            config={
+                "locale": "pt_BR"
+            }
         )
 
     # =========================
@@ -1389,7 +1667,10 @@ def render_registro_diario(
         )
         st.plotly_chart(
                 fig_prec,
-                use_container_width=True
+                use_container_width=True,
+                config={
+                    "locale": "pt_BR"
+                }
         )
 
     # ROSA DOS VENTOS
@@ -1410,9 +1691,12 @@ def render_registro_diario(
                     color=vel_media,
 
                     colorscale=[
-                        [0, "#D8F3DC"],
-                        [0.5, "#52B69A"],
-                        [1, "#1D3557"]
+                        [0.0, "#F6F5C9"],
+                        [0.2, "#DDECB2"],
+                        [0.4, "#9ED9C3"],
+                        [0.6, "#5CB7D6"],
+                        [0.8, "#2F6DB3"],
+                        [1.0, "#1B1F6B"]
                     ],
 
                     colorbar=dict(
@@ -1477,6 +1761,9 @@ def render_registro_diario(
 
         st.plotly_chart(
                 fig_vento,
-                use_container_width=True
+                use_container_width=True,
+                config={
+                    "locale": "pt_BR"
+                }
         )
 
