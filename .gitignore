@@ -1,5 +1,15 @@
+# Ignora arquivos compilados e pastas de cache do Python
 __pycache__/
 *.pyc
-.~lock.*
 
+# Ignora arquivos de trava (lock files) gerados por editores e sistemas
+.*.lock
+*.lock
+
+# Ignora todos os arquivos CSV
 *.csv
+
+# Ignora o arquivo de ambiente e a pasta datasets
+datasets/
+img/
+.env

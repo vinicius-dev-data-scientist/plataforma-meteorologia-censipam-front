@@ -58,8 +58,8 @@ def render_page(page):
 
     elif page == "merge_diario":
 
-        from services import merge_diario_cptec_service
-        merge_diario_cptec_service.render()
+        from pages import merge_diario_cptec
+        merge_diario_cptec.render()
 
     elif page == "goes_monitoramento":
 
@@ -78,8 +78,8 @@ def render_page(page):
 
     elif page == "radar":
 
-        from services import rads_obs_service
-        rads_obs_service.render()
+        from pages import rads_obs
+        rads_obs.render()
 
     else:
 
