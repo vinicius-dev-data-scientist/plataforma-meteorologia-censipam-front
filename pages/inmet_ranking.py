@@ -11,15 +11,19 @@ from services.inmet_dash_service import (
 # =========================
 
 stations = {
-
     "MANAUS (A101)": "MANAUS.csv",
+    "APUI (A113)": "APUI.csv",
+    "AUTAZES (A120)": "AUTAZES.csv",
     "BARCELOS (A128)": "BARCELOS.csv",
     "BOCA DO ACRE (A110)": "BOCA_DO_ACRE.csv",
     "COARI (A117)": "COARI.csv",
+    "EIRUNEPÉ (A132)": "EIRUNEPE.csv",
     "HUMAITÁ (A112)": "HUMAITA.csv",
     "ITACOATIARA (A121)": "ITACOATIARA.csv",
+    "LÁBREA (A111)": "LABREA.csv",
     "MANACAPURU (A119)": "MANACAPURU.csv",
     "MANICORÉ (A133)": "MANICORE.csv",
+    "MAUES (A122)": "MAUES.csv",
     "NOVO ARIPUANÃ (A144)": "NOVO_ARIPUANÃ.csv",
     "PARINTINS (A123)": "PARINTINS.csv",
     "SÃO GABRIEL DA CACHOEIRA (A134)": "SGCACHOEIRA.csv",

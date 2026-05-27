@@ -546,6 +546,39 @@ def render():
             station_name
         )
 
+# =========================
+# TICKS PT-BR
+# =========================
+
+def build_month_ticks(df, col="data"):
+
+    tickvals = pd.date_range(
+        df[col].min(),
+        df[col].max(),
+        freq="MS"
+    )
+
+    meses_pt = {
+        1: "Jan",
+        2: "Fev",
+        3: "Mar",
+        4: "Abr",
+        5: "Mai",
+        6: "Jun",
+        7: "Jul",
+        8: "Ago",
+        9: "Set",
+        10: "Out",
+        11: "Nov",
+        12: "Dez"
+    }
+
+    ticktext = [
+        f"{meses_pt[d.month]}/{d.year}"
+        for d in tickvals
+    ]
+
+    return tickvals, ticktext
 
 # =========================
 # PROCESSA ROSA DOS VENTOS
@@ -871,6 +904,18 @@ def render_resumo(
         .reset_index()
     )
 
+    tickvals, ticktext = build_month_ticks(df_daily)
+
+    def ptbr_xaxis(tickvals, ticktext):
+
+        return dict(
+            tickmode="array",
+            tickvals=tickvals,
+            ticktext=ticktext,
+            showgrid=True,
+            gridcolor="rgba(0,0,0,.05)"
+        )
+
 
     # =========================
     # GRÁFICOS
@@ -894,7 +939,7 @@ def render_resumo(
 
                 mode="markers+lines",
 
-                name="Máx. (°C)",
+                name="Máx. (°C)", 
 
                 line=dict(
                     color="#EF4444",
@@ -942,36 +987,6 @@ def render_resumo(
                 )
             )
         )
-
-        # =========================
-        # TICKS PT-BR
-        # =========================
-
-        tickvals = pd.date_range(
-            df_daily["data"].min(),
-            df_daily["data"].max(),
-            freq="MS"
-        )
-
-        meses_pt = {
-            1: "Jan",
-            2: "Fev",
-            3: "Mar",
-            4: "Abr",
-            5: "Mai",
-            6: "Jun",
-            7: "Jul",
-            8: "Ago",
-            9: "Set",
-            10: "Out",
-            11: "Nov",
-            12: "Dez"
-        }
-
-        ticktext = [
-            f"{meses_pt[d.month]}/{d.year}"
-            for d in tickvals
-        ]
 
         fig_temp.update_layout(
 
@@ -1041,13 +1056,7 @@ def render_resumo(
             # EIXO X
             # =========================
 
-            xaxis=dict(
-                tickmode="array",
-                tickvals=tickvals,
-                ticktext=ticktext,
-                showgrid=True,
-                gridcolor="rgba(0,0,0,.05)"
-            ),
+            xaxis=ptbr_xaxis(tickvals, ticktext),
 
             yaxis=dict(
                 showgrid=True,
@@ -1163,13 +1172,7 @@ def render_resumo(
             # EIXO X
             # =========================
 
-            xaxis=dict(
-                tickmode="array",
-                tickvals=tickvals,
-                ticktext=ticktext,
-                showgrid=True,
-                gridcolor="rgba(0,0,0,.05)"
-            ),
+            xaxis=ptbr_xaxis(tickvals, ticktext),
 
             yaxis=dict(
                 showgrid=True,
@@ -1280,13 +1283,7 @@ def render_resumo(
                 b=10
             ),
 
-            xaxis=dict(
-                tickmode="array",
-                tickvals=tickvals,
-                ticktext=ticktext,
-                showgrid=True,
-                gridcolor="rgba(0,0,0,.05)"
-            ),
+            xaxis=ptbr_xaxis(tickvals, ticktext),
 
             yaxis=dict(
                 title="mm",
@@ -2054,4 +2051,3 @@ def render_registro_diario(
                 "locale": "pt-BR"
             }
         )
-

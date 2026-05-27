@@ -3,81 +3,16 @@ button[kind="header"] {
   display: none !important;
 }
 
+header[data-testid="stHeader"] {
+    background: transparent !important;
+    height: 0 !important;
+    z-index: 0 !important;
+}
+
 /* =========================
    HEADER CUSTOMIZADO
 ========================= */
 
-/* .custom-header {
-  position: fixed;
-
-  z-index: 9999;
-  width: calc(100% - 26rem);
-
-  background: white;
-  border-bottom: 3px solid #1E9B4E;
-
-  margin: 28px 0 28px 0;
-  padding: 20px;
-  border-radius: 10px;
-
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.custom-header .left {
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-.custom-header .title {
-  font-weight:700;
-  font-size:14px;
-  line-height: 1.2;
-}
-
-.custom-header .subtitle {
-  font-size:11px;
-  color:#6B7280;
-  line-height: 1.2;
-}
-
-.custom-header .right {
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-.status {
-  background:#E7F6EC;
-  color:#15753A;
-  padding:6px 12px;
-  border-radius:20px;
-  font-size:12px;
-  font-weight:600;
-}
-
-.clock {
-  background:#E6F7FA;
-  padding:6px 12px;
-  border-radius:20px;
-
-  font-size:13px;
-  font-weight:600;
-  color:#0E6B75;
-
-  min-width: 120px;
-  text-align: center;
-
-  display: inline-flex; 
-  align-items: center;
-  justify-content: center;
-
-  white-space: nowrap;
-} */
 
 /* =========================
    SUBMENU ITEM (BASE)
@@ -321,8 +256,6 @@ button[kind="header"] {
   max-height: 200px;
 }
 
-
-
 /* =========================
    TÍTULO
 ========================= */
@@ -330,7 +263,7 @@ button[kind="header"] {
   font-size: 26px;
   font-weight: 800;
   color: var(--txt);
-  padding-top: 20px;
+  padding-top: 5px;
 }
 
 .subtitle {
