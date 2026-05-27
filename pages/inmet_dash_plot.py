@@ -253,6 +253,58 @@ def load_station_data(station_file):
 
         return pd.DataFrame()
 
+
+# =========================
+# FILTRO DE PERÍODO
+# =========================
+
+def filter_period(df, period):
+
+    if df.empty:
+
+        return df
+
+    if "data" not in df.columns:
+
+        return df
+
+    today = df["data"].max()
+
+    # =========================
+    # ÚLTIMOS 30 DIAS
+    # =========================
+
+    if period == "Últimos 30 dias":
+
+        start = today - pd.Timedelta(days=30)
+
+    # =========================
+    # ÚLTIMOS 15 DIAS
+    # =========================
+
+    elif period == "Últimos 15 dias":
+
+        start = today - pd.Timedelta(days=15)
+
+    # =========================
+    # ESTE MÊS
+    # =========================
+
+    elif period == "Este mês":
+
+        start = today.replace(day=1)
+
+    # =========================
+    # SEM FILTRO
+    # =========================
+
+    else:
+
+        return df
+
+    return df[
+        df["data"] >= start
+    ]
 # =========================
 # ESTAÇÕES
 # =========================

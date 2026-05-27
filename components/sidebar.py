@@ -20,7 +20,7 @@ def render_sidebar():
         with open(path, "rb") as img:
             return base64.b64encode(img.read()).decode()
 
-    logo_path = os.path.join(BASE_DIR, "img", "logo.png")
+    logo_path = os.path.join(BASE_DIR, "img", "Logo1x Censipam - Positivo.png")
     logo_base64 = load_logo_base64(logo_path)
 
     with st.sidebar:

@@ -1,11 +1,7 @@
 import streamlit as st
 import plotly.graph_objects as go
 
-from services.inmet_dash_service import (
-    load_station_data,
-    filter_period
-)
-
+from pages.inmet_dash_plot import load_station_data, filter_period
 # =========================
 # ESTAÇÕES
 # =========================

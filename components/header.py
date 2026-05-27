@@ -8,7 +8,7 @@ from utils.assets import BASE_DIR, load_img_base64
 # =========================
 def render_header():
 
-    logo_path = os.path.join(BASE_DIR, "img", "logo.png")
+    logo_path = os.path.join(BASE_DIR, "img", "Logo1x Censipam - Positivo.png")
 
     logo_base64 = load_img_base64(logo_path)
 
@@ -26,8 +26,7 @@ def render_header():
       background: white;
       border-bottom: 3px solid #1E9B4E;
 
-      margin: 28px 0 28px 0;
-      padding: 20px;
+      padding: 12px 24px;
       border-radius: 10px;
 
       display:flex;
@@ -98,7 +97,7 @@ def render_header():
 
         <div class="left">
 
-            <img src="data:image/png;base64,{logo_base64}" height="28"/>
+            <img src="data:image/png;base64,{logo_base64}" height="70"/>
 
             <div class="titles">
                 <div class="title">
