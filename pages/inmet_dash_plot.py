@@ -4,10 +4,6 @@ import streamlit as st
 
 import plotly.graph_objects as go
 from babel.dates import format_date
-# from services.inmet_dash_service import (
-#     load_station_data
-# )
-
 
 # =========================
 # PATHS

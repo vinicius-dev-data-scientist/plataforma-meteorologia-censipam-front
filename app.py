@@ -1,98 +1,131 @@
 ###################################################################################
-## Por que criar app.py?
-## O app.py é o ponto de entrada da aplicação Streamlit. Ele é responsável por ## 
-## configurar a página, gerenciar o estado da sessão, carregar os componentes de ## estilo e renderizar as páginas com base na navegação do usuário. Ter um arquivo ## separado para isso ajuda a organizar o código e facilita a manutenção da 
-## aplicação.
-## Ele também atua como um roteador, decidindo qual página renderizar com base na ## navegação do usuário, o que torna a estrutura da aplicação mais clara e modular.
+# app.py
+#
+# Ponto de entrada da aplicação Streamlit
+#
+# Responsabilidades:
+# - Configurar a página (layout, sidebar, etc.)
+# - Carregar estilos globais (CSS)
+# - Gerenciar o estado da sessão (session_state)
+# - Renderizar componentes globais (header e sidebar)
+# - Atuar como roteador, decidindo qual página exibir
+#
+# Ter esse arquivo separado:
+# - Centraliza a configuração da aplicação
+# - Facilita manutenção e escalabilidade
+# - Deixa as páginas desacopladas da lógica principal
 ###################################################################################
+
 import streamlit as st
 
+# Componentes reutilizáveis
 from components.style import load_css
 from components.sidebar import render_sidebar
 from components.header import render_header
 
-# =========================
-# CONFIG
-# =========================
+
+# ==============================================================================
+# CONFIGURAÇÃO DA PÁGINA
+# ==============================================================================
+# Define configurações globais da aplicação Streamlit
 st.set_page_config(
-    #wide para ocupar toda a largura da tela
-    layout="wide"
-    #initial_sidebar_state="collapsed" para iniciar a barra lateral recolhida
-    #initial_sidebar_state="expanded"
+    layout="wide",  # Ocupa toda a largura da tela
+    # initial_sidebar_state="collapsed",  # Inicia com sidebar recolhida (opcional)
+    # initial_sidebar_state="expanded"   # Inicia com sidebar aberta (opcional)
 )
 
-# st.query_params é um dicionário que contém os parâmetros de consulta da URL. Ele é útil para controlar a navegação e o estado da aplicação com base na URL, permitindo que os usuários compartilhem links específicos para páginas ou estados dentro da aplicação.
+
+# ==============================================================================
+# CONTROLE DE NAVEGAÇÃO VIA URL
+# ==============================================================================
+# st.query_params permite ler parâmetros da URL
+# Exemplo: ?page=inmet
 query_params = st.query_params
 
+# Se existir o parâmetro "page" na URL,
+# ele sobrescreve o valor atual da sessão
 if "page" in query_params:
     st.session_state.page = query_params["page"]
 
-# =========================
-# SESSION
-# =========================
 
-#session_state é um dicionário que armazena o estado da sessão do usuário. Ele é útil para manter informações persistentes durante a navegação, como a página atual, preferências do usuário ou dados temporários que precisam ser acessados em diferentes partes da aplicação. Ele é especialmente útil para criar uma experiência de usuário mais fluida e personalizada, permitindo que as informações sejam mantidas mesmo quando o usuário navega entre diferentes páginas ou componentes da aplicação.
+# ==============================================================================
+# GERENCIAMENTO DE SESSÃO
+# ==============================================================================
+# st.session_state armazena informações persistentes da sessão do usuário
+# Aqui garantimos que sempre exista uma página definida
 if "page" not in st.session_state:
     st.session_state.page = "home"
 
-# =========================
-# CSS
-# =========================
+
+# ==============================================================================
+# ESTILOS (CSS)
+# ==============================================================================
+# Carrega estilos globais da aplicação
 load_css()
 
-# =========================
-# COMPONENTS
-# =========================
+
+# ==============================================================================
+# COMPONENTES GLOBAIS
+# ==============================================================================
+# Renderiza componentes fixos da interface
 render_header()
 render_sidebar()
 
-# =========================
-# ROUTER serve para renderizar a página com base na navegação do usuário
-# =========================
-def render_page(page):
+
+# ==============================================================================
+# ROUTER
+# ==============================================================================
+# Responsável por decidir qual página será renderizada
+# com base no valor de st.session_state.page
+def render_page(page: str):
+    """
+    Renderiza a página correspondente à navegação atual.
+
+    Args:
+        page (str): identificador da página
+    """
 
     if page == "merge_climatologia":
-
         from pages import merge_clima
         merge_clima.render()
 
     elif page == "merge_diario":
-
         from pages import merge_diario_cptec
         merge_diario_cptec.render()
 
     elif page == "goes_monitoramento":
-
-         from pages import goes_monitoramento
-         goes_monitoramento.render()
+        from pages import goes_monitoramento
+        goes_monitoramento.render()
 
     elif page == "inmet":
-
         from pages import inmet_dash_plot
         inmet_dash_plot.render()
 
     elif page == "inmet_ranking":
-
         from pages import inmet_ranking
         inmet_ranking.render()
 
     elif page == "radar":
-
         from pages import rads_obs
         rads_obs.render()
 
     else:
-
-        st.markdown("""
+        # Página inicial / fallback
+        st.markdown(
+            """
             <div class="main-title">
                 Censipam · Divisão de Meteorologia
             </div>
             <div class="subtitle">
                 Dashboard de visualização de dados meteorológicos
             </div>
-        """, unsafe_allow_html=True)
+            """,
+            unsafe_allow_html=True
+        )
 
-# =========================
-# RUN PAGE
-# =========================
+
+# ==============================================================================
+# EXECUÇÃO
+# ==============================================================================
+# Renderiza a página atual armazenada na sessão
 render_page(st.session_state.page)
