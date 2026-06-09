@@ -14,8 +14,12 @@ from datetime import datetime
 # BASE DIR
 # =====================================================
 
-BASE_DIR = os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        ".."
+    )
 )
 
 PATH_IMGS = os.path.join(
@@ -28,20 +32,25 @@ PATH_IMGS = os.path.join(
 # PRODUTOS
 # =====================================================
 
+# =====================================================
+# PRODUTOS
+# =====================================================
+
 PRODUTOS = {
+
     "Classificação": {
         "slug": "classificacao",
-        "path": "CLASSIFICACAO"
+        "path": "Classificacao"
     },
 
     "Geocolor": {
         "slug": "geocolor",
-        "path": "GEOCOLOR"
+        "path": "Geocolor"
     },
 
     "Vapor_mid (Banda 9)": {
         "slug": "vapor_mid",
-        "path": "VAPOR"
+        "path": "Vapor_mid"
     }
 }
 
@@ -106,10 +115,6 @@ def listar_datas_produto(produto):
 # CARREGAR IMAGENS
 # =====================================================
 
-# =====================================================
-# CARREGAR IMAGENS
-# =====================================================
-
 @st.cache_data(show_spinner=False)
 def carregar_imagens(
     produto,
@@ -118,16 +123,27 @@ def carregar_imagens(
 
     produto_info = PRODUTOS[produto]
 
+    # =================================================
+    # PATH:
+    # img/Figuras/Classificacao/20260602
+    # =================================================
+
     path_produto = os.path.join(
-        PATH_BASE,
+        PATH_IMGS,
         produto_info["path"]
     )
 
+    # DEBUG
     st.write("PATH:", path_produto)
+
+    # =================================================
+    # BUSCA PNG
+    # =================================================
 
     busca = os.path.join(
         path_produto,
-        f"*{data_fmt}*.png"
+        data_fmt,
+        "*.png"
     )
 
     st.write("BUSCA:", busca)
@@ -139,21 +155,36 @@ def carregar_imagens(
     st.write("TOTAL:", len(figs))
 
     if figs:
-
         st.write(figs[:3])
+
+    # =================================================
+    # SEM IMAGENS
+    # =================================================
 
     if not figs:
         return {}, []
 
     imagens = {}
 
-    padrao = r"_(\d{4})\.png$"
+    # =================================================
+    # REGEX HORÁRIO
+    # =================================================
+    # exemplos:
+    #
+    # Band13_20260602_1810_classificacao.png
+    # geocolor_20260602_1940.png
+    # vapor_mid_20260602_1930.png
+    # =================================================
+
+    padrao = r"_(\d{4})(?:_[^_]*)?\.png$"
 
     for fig in figs:
 
+        nome = os.path.basename(fig)
+
         chave = re.findall(
             padrao,
-            fig
+            nome
         )
 
         if chave:

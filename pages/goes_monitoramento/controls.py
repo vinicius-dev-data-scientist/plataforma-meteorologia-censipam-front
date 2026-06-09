@@ -11,7 +11,6 @@ from .utils import PRODUTOS
 # =====================================================
 
 def render_controls():
-
     # =====================================================
     # MODO
     # =====================================================
@@ -22,7 +21,8 @@ def render_controls():
             "Visualização única",
             "Mosaico"
         ],
-        horizontal=True
+        horizontal=True,
+        key="gm_modo_visualizacao"
     )
 
     # =====================================================
@@ -37,7 +37,7 @@ def render_controls():
             "Data inicial",
             value=datetime.today(),
             max_value=datetime.today(),
-            key="data_inicio"
+            key="gm_data_inicio"
         )
 
     with col_fim:
@@ -46,7 +46,7 @@ def render_controls():
             "Data final",
             value=datetime.today(),
             max_value=datetime.today(),
-            key="data_fim"
+            key="gm_data_fim"
         )
 
     # =====================================================
@@ -73,7 +73,8 @@ def render_controls():
         produto = st.selectbox(
             "Produto",
             list(PRODUTOS.keys()),
-            index=0
+            index=0,
+            key="gm_produto"
         )
 
     # =====================================================
@@ -87,7 +88,8 @@ def render_controls():
             min_value=1,
             max_value=10,
             value=2,
-            step=1
+            step=1,
+            key="gm_n_linhas"
         )
 
     # =====================================================

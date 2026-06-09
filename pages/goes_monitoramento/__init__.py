@@ -1,3 +1,1 @@
-from pages.goes_monitoramento.page import render
-
-render()
+from .page import render
