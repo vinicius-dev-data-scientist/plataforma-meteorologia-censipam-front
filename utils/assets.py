@@ -4,8 +4,23 @@ import base64
 # raiz do projeto
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-IMG_DIR = os.path.join(BASE_DIR, "img", "OLDS")
 
+STATIC_IMG = os.path.join(
+    BASE_DIR,
+    "static",
+    "img"
+)
+
+IMG_DIR = os.path.join(
+    STATIC_IMG,
+    "OLDS"
+)
+
+PATH_IMGS = os.path.join(
+    BASE_DIR,
+    "img",
+    "Figuras"
+)
 
 def load_img_base64(path):
 

@@ -1,14 +1,17 @@
 import os
 import streamlit.components.v1 as components
 
-from utils.assets import BASE_DIR, load_img_base64
+from utils.assets import BASE_DIR, STATIC_IMG, load_img_base64
 
 # =========================
 # HEADER
 # =========================
 def render_header():
 
-    logo_path = os.path.join(BASE_DIR, "img", "Logo1x Censipam - Positivo.png")
+    logo_path = os.path.join(
+        STATIC_IMG,
+        "Logo1x Censipam - Positivo.png"
+    )
 
     logo_base64 = load_img_base64(logo_path)
 

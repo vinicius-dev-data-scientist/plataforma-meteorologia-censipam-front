@@ -1,3 +1,6 @@
+from utils.assets import STATIC_IMG
+
+
 def render_sidebar():
     import os
     import base64
@@ -7,9 +10,7 @@ def render_sidebar():
 
     load_css()
 
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-    icon_dir = os.path.join(BASE_DIR, "img")
+    icon_dir = os.path.join(STATIC_IMG, "icons")
 
     icon_estacoes  = load_img_base64(os.path.join(icon_dir, "icon_estacoes.png"))
     icon_satelite  = load_img_base64(os.path.join(icon_dir, "icon_satelite.png"))
@@ -20,7 +21,7 @@ def render_sidebar():
         with open(path, "rb") as img:
             return base64.b64encode(img.read()).decode()
 
-    logo_path = os.path.join(BASE_DIR, "img", "Logo1x Censipam - Positivo.png")
+    logo_path = os.path.join(STATIC_IMG, "Logo1x Censipam - Positivo.png")
     logo_base64 = load_logo_base64(logo_path)
 
     with st.sidebar:

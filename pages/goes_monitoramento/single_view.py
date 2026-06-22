@@ -46,18 +46,20 @@ def render_single_view(config):
     # BASE64
     # =================================================
 
-    imagens_b64 = {
+    imagens_js = {
 
         k: (
             "data:image/png;base64,"
-            + base64.b64encode(v).decode()
+            +
+            base64.b64encode(v).decode()
         )
 
         for k, v in imagens.items()
+
     }
 
     js_images = json.dumps(
-        imagens_b64
+        imagens_js
     )
 
     js_opcoes = json.dumps(
@@ -72,40 +74,77 @@ def render_single_view(config):
     <html>
     <head>
     <style>
-    body {{
-        margin: 0;
-        padding: 0;
-        font-family: sans-serif;
-    }}
-    .controls {{
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        margin-bottom: 12px;
-    }}
-    .viewer {{
-        width: 100%;
-        height: 70vh;
-        max-height: 700px;
-        min-height: 400px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #000;
-        border-radius: 12px;
-        overflow: hidden;
-    }}
-    .viewer img {{
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
-    }}
-    .info {{
-        margin-bottom: 10px;
-        font-size: 14px;
-        color: #444;
-    }}
-    </style>
+
+        *{{
+            box-sizing:border-box;
+        }}
+        body{{
+            margin:0;
+            padding:10px;
+            font-family:sans-serif;
+        }}
+        .info{{
+            margin-bottom:10px;
+            color:#374151;
+            font-size:14px;
+        }}
+        .controls{{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            margin-bottom:12px;
+        }}
+        .btn{{
+            height:42px;
+            min-width:95px;
+            border:none;
+            border-radius:12px;
+            cursor:pointer;
+            font-weight:600;
+            transition:.2s;
+        }}
+        .play{{
+            background:#1E9B4E;
+            color:white;
+        }}
+        .play:hover{{
+            background:#16783c;
+        }}
+        .stop{{
+            background:#EEF2F7;
+        }}
+        .stop:hover{{
+            background:#DDE5EF;
+        }}
+        #slider{{
+            flex:1;
+            accent-color:#1E9B4E;
+        }}
+        #speed{{
+            height:42px;
+            border-radius:12px;
+            padding:0 12px;
+            border:1px solid #D6DCE5;
+            background:white;
+        }}
+        .viewer{{
+            width:100%;
+            height:65vh;
+            min-height:380px;
+            max-height:650px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:#000;
+            border-radius:16px;
+            overflow:hidden;
+        }}
+        .viewer img{{
+            max-width:100%;
+            max-height:100%;
+            object-fit:contain;
+        }}
+        </style>
     </head>
     <body>
     <div class="info">
@@ -113,11 +152,17 @@ def render_single_view(config):
         <b>{produto}</b>
     </div>
     <div class="controls">
-        <button id="btn-play">
-            ▶ Play
+        <button
+            id="btn-play"
+            class="btn play"
+        >
+        ▶ Play
         </button>
-        <button id="btn-stop">
-            ⏹ Stop
+        <button
+            id="btn-stop"
+            class="btn stop"
+        >
+        ⏹ Stop
         </button>
         <input
             type="range"
@@ -125,24 +170,23 @@ def render_single_view(config):
             min="0"
             max="{len(opcoes)-1}"
             value="{len(opcoes)-1}"
-            style="flex:1;"
         >
         <select id="speed">
-            <option value="2000">
-                🐢 Muito lenta
-            </option>
-            <option value="1000">
-                🐌 Lenta
-            </option>
-            <option value="500" selected>
-                🚶 Normal
-            </option>
-            <option value="250">
-                🚀 Rápida
-            </option>
-            <option value="100">
-                ⚡ Muito rápida
-            </option>
+        <option value="2000">
+        🐢 Muito lenta
+        </option>
+        <option value="1000">
+        🐌 Lenta
+        </option>
+        <option value="500" selected>
+        🚶 Normal
+        </option>
+        <option value="250">
+        🚀 Rápida
+        </option>
+        <option value="100">
+        ⚡ Muito rápida
+        </option>
         </select>
     </div>
     <div class="info">
@@ -258,6 +302,6 @@ def render_single_view(config):
 
     components.html(
         html,
-        height=850,
+        height=760,
         scrolling=False
     )

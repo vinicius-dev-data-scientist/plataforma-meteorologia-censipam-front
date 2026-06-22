@@ -14,11 +14,11 @@ from datetime import datetime
 # BASE DIR
 # =====================================================
 
-BASE_DIR = os.path.abspath(
-    os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        ".."
+BASE_DIR = os.path.dirname(
+    os.path.dirname(
+        os.path.dirname(
+            os.path.abspath(__file__)
+        )
     )
 )
 
@@ -28,9 +28,6 @@ PATH_IMGS = os.path.join(
     "Figuras"
 )
 
-# =====================================================
-# PRODUTOS
-# =====================================================
 
 # =====================================================
 # PRODUTOS
@@ -189,8 +186,54 @@ def carregar_imagens(
 
         if chave:
 
-            with open(fig, "rb") as f:
-
-                imagens[chave[0]] = f.read()
+            # salva apenas o caminho
+            imagens[chave[0]] = fig
 
     return imagens, sorted(imagens.keys())
+
+# =====================================================
+# CARREGAR PATHS
+# =====================================================
+
+@st.cache_data(show_spinner=False)
+def carregar_paths(produto, data_fmt):
+
+    path_produto = os.path.join(
+        get_produto_path(produto),
+        data_fmt
+    )
+
+    busca = os.path.join(
+        path_produto,
+        "*.png"
+    )
+
+    st.write("BUSCA:", busca)
+
+    figs = sorted(
+        glob.glob(busca)
+    )
+
+    st.write("TOTAL:", len(figs))
+
+    if not figs:
+        return {}, []
+
+    paths = {}
+
+    padrao = r"_(\d{4})(?:_[^_]*)?\.png$"
+
+    for fig in figs:
+
+        nome = os.path.basename(fig)
+
+        chave = re.findall(
+            padrao,
+            nome
+        )
+
+        if chave:
+
+            paths[chave[0]] = fig
+
+    return paths, sorted(paths.keys())

@@ -83,23 +83,70 @@ def render_controls():
 
     else:
 
-        n_linhas = st.number_input(
-            "Número de linhas",
-            min_value=1,
-            max_value=10,
-            value=2,
-            step=1,
-            key="gm_n_linhas"
+        produtos = st.multiselect(
+            "Produtos",
+            options=list(PRODUTOS.keys()),
+            default=list(PRODUTOS.keys()),
+            key="gm_produtos"
         )
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+
+            n_colunas = st.number_input(
+                "Número de colunas",
+                min_value=1,
+                max_value=4,
+                value=3,
+                step=1,
+                key="gm_n_colunas"
+            )
+
+        with col2:
+
+            n_linhas = st.number_input(
+                "Número de linhas",
+                min_value=1,
+                max_value=10,
+                value=2,
+                step=1,
+                key="gm_n_linhas"
+            )
+
+        if not produtos:
+
+            st.warning(
+                "Selecione pelo menos um produto."
+            )
+
+            st.stop()
 
     # =====================================================
     # RETORNO
     # =====================================================
 
     return {
+
         "modo": modo,
+
         "produto": produto,
+
+        "produtos": (
+            produtos
+            if modo == "Mosaico"
+            else [produto]
+        ),
+
         "data_inicio": data_inicio,
+
         "data_fim": data_fim,
+
+        "n_colunas": (
+            n_colunas
+            if modo == "Mosaico"
+            else 1
+        ),
+
         "n_linhas": n_linhas
     }

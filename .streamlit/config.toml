@@ -5,4 +5,5 @@ showSidebarNavigation = false
 base = "light"
 
 [server]
+enableStaticServing = true
 headless = true
