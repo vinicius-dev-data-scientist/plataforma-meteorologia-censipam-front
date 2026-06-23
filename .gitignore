@@ -13,3 +13,7 @@ __pycache__/
 datasets/
 img/
 .env
+
+statics/img/
+
+dados.zip
