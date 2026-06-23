@@ -8,6 +8,7 @@ import streamlit.components.v1 as components
 
 from .utils import (
     carregar_imagens,
+    carregar_paths,
     format_hora
 )
 
@@ -29,7 +30,7 @@ def render_single_view(config):
     # CARREGA IMAGENS
     # =================================================
 
-    imagens, opcoes = carregar_imagens(
+    imagens, opcoes = carregar_paths(
         produto,
         data_fmt
     )
@@ -43,20 +44,22 @@ def render_single_view(config):
         return
 
     # =================================================
-    # BASE64
+    # Carrega imagens em base64 para o JS
     # =================================================
 
-    imagens_js = {
+    imagens_js = {}
 
-        k: (
-            "data:image/png;base64,"
-            +
-            base64.b64encode(v).decode()
-        )
+    for hora, path in imagens.items():
 
-        for k, v in imagens.items()
+        with open(path, "rb") as f:
 
-    }
+            imagens_js[hora] = (
+                "data:image/png;base64,"
+                +
+                base64.b64encode(
+                    f.read()
+                ).decode()
+            )
 
     js_images = json.dumps(
         imagens_js
@@ -129,9 +132,8 @@ def render_single_view(config):
         }}
         .viewer{{
             width:100%;
-            height:65vh;
-            min-height:380px;
-            max-height:650px;
+            height:150vh;
+            min-height:600px;
             display:flex;
             align-items:center;
             justify-content:center;
@@ -156,13 +158,13 @@ def render_single_view(config):
             id="btn-play"
             class="btn play"
         >
-        ▶ Play
+        ▶ Iniciar
         </button>
         <button
             id="btn-stop"
             class="btn stop"
         >
-        ⏹ Stop
+        ⏹ Parar
         </button>
         <input
             type="range"

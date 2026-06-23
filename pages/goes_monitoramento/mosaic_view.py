@@ -1,8 +1,8 @@
 # mosaic_view.py
 
 import json
-import base64
 import os
+import base64
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -87,24 +87,20 @@ def render_mosaic_view(config):
     for produto in produtos:
 
         paths_js[produto] = {}
+        MAX_FRAMES = 5
+        for hora, path in list(
+            dados[produto]["paths"].items()
+        )[-MAX_FRAMES:]:
 
-        for hora, path in (
-            dados[produto]["paths"]
-        ).items():
+            with open(path, "rb") as f:
 
-            rel = os.path.relpath(
-                path,
-                start="."
-            )
-
-            paths_js[produto][hora] = (
-                "/static/"
-                +
-                rel.replace(
-                    "\\",
-                    "/"
+                paths_js[produto][hora] = (
+                    "data:image/png;base64,"
+                    +
+                    base64.b64encode(
+                        f.read()
+                    ).decode()
                 )
-            )
 
 
     # =================================================
@@ -145,24 +141,48 @@ def render_mosaic_view(config):
         font-family:sans-serif;
     }}
 
-    .controls {{
+    .controls{{
         display:flex;
-        gap:10px;
         align-items:center;
-        margin-bottom:16px;
+        gap:10px;
+        margin-bottom:12px;
     }}
-    .btn {{
-        background:#0F766E;
-        color:white;
+    .btn{{
+        height:42px;
+        min-width:95px;
         border:none;
-        padding:10px 16px;
-        border-radius:8px;
+        border-radius:12px;
         cursor:pointer;
+        font-weight:600;
+        transition:.2s;
+    }}
+    .play{{
+        background:#1E9B4E;
+        color:white;
+    }}
+    .play:hover{{
+        background:#16783c;
+    }}
+    .stop{{
+        background:#EEF2F7;
+    }}
+    .stop:hover{{
+        background:#DDE5EF;
     }}
     .btn:hover {{
         opacity:.9;
     }}
-
+    #slider{{
+        flex:1;
+        accent-color:#1E9B4E;
+    }}
+    #speed{{
+        height:42px;
+        border-radius:12px;
+        padding:0 12px;
+        border:1px solid #D6DCE5;
+        background:white;
+    }}
     .grid {{
         display:grid;
         grid-template-columns:
@@ -198,12 +218,12 @@ def render_mosaic_view(config):
             <button
                 class="btn"
                 id="play">
-                ▶ Play
+                ▶ Iniciar
             </button>
                 <button
                 class="btn"
                 id="stop">
-                ⏹ Stop
+                ⏹ Parar
             </button>
             <input
                 type="range"
@@ -257,7 +277,7 @@ def render_mosaic_view(config):
 
     <script>
 
-    const paths =
+    const imagens =
     {json.dumps(paths_js)}
 
     const opcoes =
@@ -319,19 +339,15 @@ def render_mosaic_view(config):
                     )
 
                 if(
-                    paths[produto]
+                    imagens[produto]
                     &&
-                    paths[produto][chave]
+                    imagens[produto][chave]
                 ){{
 
                     img.src =
-                        window.location.origin
-                        +
-                        paths[produto][chave]
+                        imagens[produto][chave]
 
-                }}
-
-                else{{
+                }}else{{
 
                     img.src = ""
 
