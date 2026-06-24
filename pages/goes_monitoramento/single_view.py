@@ -132,16 +132,18 @@ def render_single_view(config):
         }}
         .viewer{{
             width:100%;
-            height:150vh;
-            min-height:600px;
+            height:90vh;
             display:flex;
             align-items:center;
             justify-content:center;
             background:#000;
             border-radius:16px;
             overflow:hidden;
+            padding:12px;
         }}
         .viewer img{{
+            width:auto;
+            height:auto;
             max-width:100%;
             max-height:100%;
             object-fit:contain;

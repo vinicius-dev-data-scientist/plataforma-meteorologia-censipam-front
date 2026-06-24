@@ -48,6 +48,10 @@ PRODUTOS = {
     "Vapor_mid (Banda 9)": {
         "slug": "vapor_mid",
         "path": "Vapor_mid"
+    },
+    "Clima": {
+        "slug": "clima",
+        "path": "Clima"
     }
 }
 
@@ -143,13 +147,13 @@ def carregar_imagens(
         "*.png"
     )
 
-    st.write("BUSCA:", busca)
+    #st.write("BUSCA:", busca)
 
     figs = sorted(
         glob.glob(busca)
     )
 
-    st.write("TOTAL:", len(figs))
+    #st.write("TOTAL:", len(figs))
 
     if figs:
         st.write(figs[:3])
@@ -208,13 +212,13 @@ def carregar_paths(produto, data_fmt):
         "*.png"
     )
 
-    st.write("BUSCA:", busca)
+    #st.write("BUSCA:", busca)
 
     figs = sorted(
         glob.glob(busca)
     )
 
-    st.write("TOTAL:", len(figs))
+    #st.write("TOTAL:", len(figs))
 
     if not figs:
         return {}, []
@@ -237,3 +241,62 @@ def carregar_paths(produto, data_fmt):
             paths[chave[0]] = fig
 
     return paths, sorted(paths.keys())
+
+@st.cache_data(show_spinner=False)
+def carregar_clima(ano, mes, dia):
+
+    pasta = os.path.join(
+        PATH_IMGS,
+        "Clima",
+        ano,
+        mes,
+        dia
+        #f"{ano}{mes:02d}{dia:02d}"
+    )
+
+    if not os.path.exists(pasta):
+        return {}
+    
+    arquivos = sorted(
+        glob.glob(
+            os.path.join(
+                pasta,
+                "*.png"
+            )
+        )
+    )
+
+    grupos = {
+        "Vento": [],
+        "Evolução": [],
+        "Índice": [],
+        "Tendência": []
+    }
+
+    for arq in arquivos:
+
+        nome = os.path.basename(
+            arq
+        ).lower()
+
+        if "ventos_" in nome:
+            grupos["Vento"].append(arq)
+        elif "evolucao_" in nome:
+            grupos["Evolução"].append(arq)
+
+        elif (
+            "indice" in nome
+            or
+            "indices" in nome
+            or
+            "hov_miller" in nome
+        ):
+            grupos["Índice"].append(arq)
+
+        elif(
+            "sst"
+            in nome
+        ):
+            grupos["Tendência"].append(arq)
+
+    return grupos

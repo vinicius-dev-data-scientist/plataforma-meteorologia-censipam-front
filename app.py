@@ -93,6 +93,10 @@ def render_page(page: str):
         from pages import merge_diario_cptec
         merge_diario_cptec.render()
 
+    elif page == "clima":
+        from pages import clima_view
+        clima_view.render()
+
     elif page == "goes_monitoramento":
         from pages import goes_monitoramento
         goes_monitoramento.render()

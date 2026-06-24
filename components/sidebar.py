@@ -78,6 +78,11 @@ def render_sidebar():
                     class="submenu-item {'active' if active_page == 'goes_monitoramento' else ''}">
                     GOES - Imagens
                     </a>
+                    <a href="?page=clima"
+                    target="_self"
+                    class="submenu-item {'active' if active_page == 'clima' else ''}">
+                    Clima
+                    </a>
                 </div>
             </div>
             <div class="menu-item">
