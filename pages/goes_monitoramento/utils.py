@@ -48,10 +48,6 @@ PRODUTOS = {
     "Vapor_mid (Banda 9)": {
         "slug": "vapor_mid",
         "path": "Vapor_mid"
-    },
-    "Clima": {
-        "slug": "clima",
-        "path": "Clima"
     }
 }
 

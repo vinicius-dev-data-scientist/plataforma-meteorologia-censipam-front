@@ -12,6 +12,7 @@ __pycache__/
 # Ignora o arquivo de ambiente e a pasta datasets
 datasets/
 img/
-.env
 static/
+
+.env
 dados.zip
