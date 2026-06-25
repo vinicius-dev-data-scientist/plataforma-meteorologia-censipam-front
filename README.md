@@ -60,3 +60,7 @@ streamlit run app.py
 ## Roadmap
 
 ## Licença
+
+## Observações
+- Os dados de planilhas e imagens estão organizados na seguinte estrutura em:
+![Distribuição dos dados](docs/images/dados.png)
