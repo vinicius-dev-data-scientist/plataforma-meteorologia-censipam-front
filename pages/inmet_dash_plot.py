@@ -5,6 +5,9 @@ import streamlit as st
 import plotly.graph_objects as go
 from babel.dates import format_date
 
+import plotly.graph_objects as go
+import plotly.express as px
+
 # =========================
 # PATHS
 # =========================
@@ -307,18 +310,18 @@ def filter_period(df, period):
 
 stations = {
     "MANAUS (A101)": "MANAUS.csv",
-    "APUI (A113)": "APUI.csv",
-    "AUTAZES (A120)": "AUTAZES.csv",
+    #"APUI (A113)": "APUI.csv",
+    #"AUTAZES (A120)": "AUTAZES.csv",
     "BARCELOS (A128)": "BARCELOS.csv",
     "BOCA DO ACRE (A110)": "BOCA_DO_ACRE.csv",
     "COARI (A117)": "COARI.csv",
-    "EIRUNEPÉ (A132)": "EIRUNEPE.csv",
+    #"EIRUNEPÉ (A132)": "EIRUNEPE.csv",
     "HUMAITÁ (A112)": "HUMAITA.csv",
     "ITACOATIARA (A121)": "ITACOATIARA.csv",
-    "LÁBREA (A111)": "LABREA.csv",
+    #"LÁBREA (A111)": "LABREA.csv",
     "MANACAPURU (A119)": "MANACAPURU.csv",
     "MANICORÉ (A133)": "MANICORE.csv",
-    "MAUES (A122)": "MAUES.csv",
+    #"MAUES (A122)": "MAUES.csv",
     "NOVO ARIPUANÃ (A144)": "NOVO_ARIPUANÃ.csv",
     "PARINTINS (A123)": "PARINTINS.csv",
     "SÃO GABRIEL DA CACHOEIRA (A134)": "SGCACHOEIRA.csv",
@@ -584,7 +587,12 @@ def render():
 
     elif produto == "Eventos Extremos":
 
-        render_extremos(df)
+        render_extremos(
+            df=df,
+            station=station_name,
+            data_inicio=start_date,
+            data_fim=end_date
+        )
 
     elif produto == "Registro Diário":
 
@@ -1448,29 +1456,435 @@ def render_resumo(
             }
         )
 
-def render_extremos(df):
+def render_extremos(
+    df,
+    station,
+    data_inicio,
+    data_fim
+):
 
     st.markdown("## Eventos Extremos")
 
-    c1, c2, c3 = st.columns(3)
+    # =====================================================
+    # FILTROS DO PAINEL
+    # =====================================================
 
-    with c1:
-        st.metric(
-            "Maior Temperatura",
-            f"{df['temp_max'].max():.1f} °C"
+    c0, c1, c2, c3, c4 = st.columns([1.8, 2.2, 1.1, 1.1, 1])
+
+    with c0:
+
+        opcoes_estacao = ["Todas as estações"] + list(stations.keys())
+
+        indice_padrao = (
+            opcoes_estacao.index(station)
+            if station in opcoes_estacao
+            else 0
         )
 
+        station = st.selectbox(
+
+            "Estação",
+
+            opcoes_estacao,
+
+            index=indice_padrao,
+
+            key="estacao_extremos"
+
+        )
+
+    with c1:
+
+        variavel = st.selectbox(
+
+            "Variável",
+
+            [
+
+                "Maior Temperatura Máxima",
+                "Menor Temperatura Máxima",
+                "Maior Temperatura Mínima",
+                "Menor Temperatura Mínima",
+                "Maior Chuva",
+                "Menor Chuva",
+                "Maior Rajada",
+                "Menor Rajada"
+
+            ]
+
+        )
+
+    # ------------------------------------
+
+    anos = set()
+
+    if station == "Todas as estações":
+
+        arquivos = stations.values()
+
+    else:
+
+        arquivos = [stations[station]]
+
+    for arquivo in arquivos:
+
+        d = load_station_data(arquivo)
+
+        if d.empty:
+            continue
+
+        anos.update(
+
+            d["data"].dt.year.dropna().unique()
+
+        )
+
+    anos = sorted(anos)
+
     with c2:
-        st.metric(
-            "Maior Chuva",
-            f"{df['chuva'].max():.1f} mm"
+
+        ano = st.selectbox(
+
+            "Ano",
+
+            ["Todos"] + anos
+
         )
 
     with c3:
-        st.metric(
-            "Maior Rajada",
-            f"{df['vento_raj'].max():.1f} m/s"
+
+        meses = [
+
+            "Todos",
+            "Janeiro",
+            "Fevereiro",
+            "Março",
+            "Abril",
+            "Maio",
+            "Junho",
+            "Julho",
+            "Agosto",
+            "Setembro",
+            "Outubro",
+            "Novembro",
+            "Dezembro"
+
+        ]
+
+        mes = st.selectbox(
+
+            "Mês",
+
+            meses
+
         )
+
+    with c4:
+
+        crescente = st.toggle(
+
+            "Ordem crescente",
+
+            value=False
+
+        )
+    # =====================================================
+    # VARIÁVEL
+    # =====================================================
+
+    mapa = {
+
+        "Maior Temperatura Máxima":
+            "temp_max",
+
+        "Menor Temperatura Máxima":
+            "temp_max",
+
+        "Maior Temperatura Mínima":
+            "temp_min",
+
+        "Menor Temperatura Mínima":
+            "temp_min",
+
+        "Maior Chuva":
+            "chuva",
+
+        "Menor Chuva":
+            "chuva",
+
+        "Maior Rajada":
+            "vento_raj",
+
+        "Menor Rajada":
+            "vento_raj"
+
+    }
+
+    coluna = mapa[variavel]
+
+    registros = []
+
+    # ===========================================
+    # ESTAÇÃO SELECIONADA
+    # ===========================================
+
+    if station == "Todas as estações":
+
+        lista_estacoes = list(stations.items())
+
+    else:
+
+        lista_estacoes = [
+
+            (
+
+                station,
+
+                stations[station]
+
+            )
+
+        ]
+
+    for nome_estacao, arquivo in lista_estacoes:
+
+        # -----------------------------
+        # se veio da página usa o df
+        # -----------------------------
+
+        if station != "Todas as estações":
+
+            df_est = df.copy()
+
+        else:
+
+            df_est = load_station_data(arquivo)
+
+        if df_est.empty:
+            continue
+
+        # -----------------------------
+        # Ano
+        # -----------------------------
+
+        if ano != "Todos":
+
+            df_est = df_est[
+                df_est["data"].dt.year == ano
+            ]
+
+        # -----------------------------
+        # Mês
+        # -----------------------------
+
+        if mes != "Todos":
+
+            numero_mes = meses.index(mes)
+
+            df_est = df_est[
+                df_est["data"].dt.month == numero_mes
+            ]
+
+        # -----------------------------
+        # Data inicial
+        # -----------------------------
+
+        if data_inicio is not None:
+
+            df_est = df_est[
+                df_est["data"] >= pd.Timestamp(data_inicio)
+            ]
+
+        # -----------------------------
+        # Data final
+        # -----------------------------
+
+        if data_fim is not None:
+
+            df_est = df_est[
+                df_est["data"] <= pd.Timestamp(data_fim)
+            ]
+
+        # -----------------------------
+
+        df_est = df_est.dropna(subset=[coluna])
+
+        if df_est.empty:
+            continue
+
+        for _, linha in df_est.iterrows():
+
+            registros.append({
+
+                "Estação": nome_estacao,
+
+                "Valor": linha[coluna],
+
+                "Data": linha["data"]
+
+            })
+
+    # =====================================================
+
+    tabela = pd.DataFrame(registros)
+
+    if tabela.empty:
+
+        st.info("Nenhum registro encontrado.")
+
+        return
+
+    # =====================================================
+    # ORDENAÇÃO
+    # =====================================================
+
+    asc = crescente
+
+    if variavel == "Maior Temperatura Máxima":
+
+        asc = crescente
+
+    elif variavel == "Maior Temperatura Mínima":
+
+        asc = crescente
+
+    elif variavel == "Maior Chuva":
+
+        asc = crescente
+
+    elif variavel == "Menor Chuva":
+
+        asc = not crescente
+
+    elif variavel == "Maior Rajada":
+
+        asc = crescente
+
+    elif variavel == "Menor Rajada":
+
+        asc = not crescente
+
+    elif variavel == "Menor Temperatura Máxima":
+
+        asc = not crescente
+
+    elif variavel == "Menor Temperatura Mínima":
+
+        asc = not crescente
+
+    tabela = (
+
+        tabela
+
+        .sort_values(
+
+            "Valor",
+
+            ascending=asc
+
+        )
+
+        .reset_index(drop=True)
+
+    )
+
+    tabela["Data"] = (
+
+        tabela["Data"]
+
+        .dt.strftime("%d/%m/%Y")
+
+    )
+
+    # =====================================================
+    # TABELA
+    # =====================================================
+
+    st.dataframe(
+
+        tabela,
+
+        use_container_width=True,
+
+        hide_index=True
+
+    )
+
+    # =====================================================
+    # TOP 30 PARA O GRÁFICO
+    # =====================================================
+
+    grafico = tabela.head(30).copy()
+
+    # -----------------------------------------------------
+    # Rótulo único por barra (Estação + Data)
+    # Evita que o Plotly empilhe todos os registros na
+    # mesma categoria do eixo Y quando há uma só estação
+    # -----------------------------------------------------
+
+    grafico["Rótulo"] = (
+
+        grafico["Estação"] + " · " + grafico["Data"]
+
+    )
+
+    fig = px.bar(
+
+        grafico,
+
+        x="Valor",
+
+        y="Rótulo",
+
+        orientation="h",
+
+        text="Valor",
+
+        color="Valor",
+
+        hover_data=["Estação", "Data"]
+
+    )
+
+    fig.update_layout(
+
+        title=f"Ranking - {variavel}",
+
+        xaxis_title="Valor",
+
+        yaxis_title="",
+
+        height=max(
+
+            600,
+
+            len(grafico) * 30
+
+        ),
+
+        coloraxis_showscale=False,
+
+        yaxis=dict(
+
+            autorange="reversed"
+
+        )
+
+    )
+
+    fig.update_traces(
+
+        textposition="outside"
+
+    )
+
+    st.plotly_chart(
+
+        fig,
+
+        use_container_width=True
+
+    )
 
 def render_registro_diario(
     df,

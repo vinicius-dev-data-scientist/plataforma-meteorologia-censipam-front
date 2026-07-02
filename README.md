@@ -51,9 +51,9 @@ streamlit run app.py
 ## Estrutura do Código
 ![Arquitetura do Projeto](docs/architecture.md)
 
-## Banco de Dados (se houver)
+## Banco de Dados
 
-## API (se houver)
+## API
 
 ## Testes
 
