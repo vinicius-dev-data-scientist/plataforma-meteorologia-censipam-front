@@ -1502,13 +1502,9 @@ def render_extremos(
             [
 
                 "Maior Temperatura Máxima",
-                "Menor Temperatura Máxima",
-                "Maior Temperatura Mínima",
                 "Menor Temperatura Mínima",
                 "Maior Chuva",
-                "Menor Chuva",
-                "Maior Rajada",
-                "Menor Rajada"
+                "Maior Rajada"
 
             ]
 
@@ -1597,26 +1593,14 @@ def render_extremos(
         "Maior Temperatura Máxima":
             "temp_max",
 
-        "Menor Temperatura Máxima":
-            "temp_max",
-
-        "Maior Temperatura Mínima":
-            "temp_min",
-
         "Menor Temperatura Mínima":
             "temp_min",
 
         "Maior Chuva":
             "chuva",
 
-        "Menor Chuva":
-            "chuva",
-
         "Maior Rajada":
             "vento_raj",
-
-        "Menor Rajada":
-            "vento_raj"
 
     }
 
@@ -1709,24 +1693,228 @@ def render_extremos(
 
         df_est = df_est.dropna(subset=[coluna])
 
+        # ======================================
+        # FILTROS POR VARIÁVEL
+        # ======================================
+
+        if variavel == "Maior Chuva":
+            df_est = df_est[df_est["chuva"] >= 15]
+
+        elif variavel == "Maior Rajada":
+            df_est = df_est[df_est["vento_raj"] > 0]
+
+        elif variavel == "Maior Temperatura Máxima":
+            df_est = df_est[df_est["temp_max"] > 0]
+
+        elif variavel == "Menor Temperatura Mínima":
+            df_est = df_est[df_est["temp_min"] > -20]
+
         if df_est.empty:
             continue
 
-        for _, linha in df_est.iterrows():
+        # =====================================================
+        # REGRAS DAS VARIÁVEIS
+        # =====================================================
 
-            registros.append({
+        regras = {
 
-                "Estação": nome_estacao,
+            "Maior Temperatura Máxima": {
+                "coluna": "temp_max",
+                "operacao": "max"
+            },
 
-                "Valor": linha[coluna],
+            "Menor Temperatura Mínima": {
+                "coluna": "temp_min",
+                "operacao": "min"
+            },
 
-                "Data": linha["data"]
+            "Maior Chuva": {
+                "coluna": "chuva",
+                "operacao": "sum"
+            },
 
-            })
+            "Maior Rajada": {
+                "coluna": "vento_raj",
+                "operacao": "max"
+            }
+
+        }
+
+        cfg = regras[variavel]
+
+        coluna = cfg["coluna"]
+
+        operacao = cfg["operacao"]
+
+        registros = []
+
+        # =====================================================
+        # ESTAÇÕES
+        # =====================================================
+
+        if station == "Todas as estações":
+
+            lista_estacoes = list(stations.items())
+
+        else:
+
+            lista_estacoes = [
+
+                (
+
+                    station,
+
+                    stations[station]
+
+                )
+
+            ]
+
+        for nome_estacao, arquivo in lista_estacoes:
+
+            if station == "Todas as estações":
+
+                df_est = load_station_data(arquivo)
+
+            else:
+
+                df_est = df.copy()
+
+            if df_est.empty:
+                continue
+
+            # -----------------------------------
+            # Filtros
+            # -----------------------------------
+
+            if ano != "Todos":
+
+                df_est = df_est[
+                    df_est["data"].dt.year == ano
+                ]
+
+            if mes != "Todos":
+
+                numero_mes = meses.index(mes)
+
+                df_est = df_est[
+                    df_est["data"].dt.month == numero_mes
+                ]
+
+            if data_inicio is not None:
+
+                df_est = df_est[
+                    df_est["data"] >= pd.Timestamp(data_inicio)
+                ]
+
+            if data_fim is not None:
+
+                df_est = df_est[
+                    df_est["data"] <= pd.Timestamp(data_fim)
+                ]
+
+            df_est = df_est.dropna(subset=[coluna])
+
+            if df_est.empty:
+                continue
+
+            # =====================================================
+            # EVENTOS DIÁRIOS
+            # =====================================================
+
+            df_eventos = (
+
+                df_est
+
+                .groupby(df_est["data"].dt.normalize())
+
+                .agg({
+
+                    coluna: operacao
+
+                })
+
+                .reset_index()
+
+                .rename(columns={
+
+                    "data": "Data"
+
+                })
+
+            )
+
+            # =====================================================
+            # FILTROS FÍSICOS
+            # =====================================================
+
+            if variavel == "Maior Chuva":
+
+                df_eventos = df_eventos[
+                    df_eventos[coluna] >= 15
+                ]
+
+            elif variavel == "Maior Rajada":
+
+                df_eventos = df_eventos[
+                    df_eventos[coluna] > 0
+                ]
+
+            elif variavel == "Maior Temperatura Máxima":
+
+                df_eventos = df_eventos[
+                    df_eventos[coluna] > 0
+                ]
+
+            elif variavel == "Menor Temperatura Mínima":
+
+                df_eventos = df_eventos[
+                    df_eventos[coluna] > -20
+                ]
+
+            if df_eventos.empty:
+                continue
+
+            df_eventos["Estação"] = nome_estacao
+
+            df_eventos.rename(
+
+                columns={
+
+                    coluna: "Valor",
+
+                    "data": "Data"
+
+                },
+
+                inplace=True
+
+            )
+
+            registros.append(
+
+                df_eventos[
+
+                    [
+
+                        "Estação",
+
+                        "Valor",
+
+                        "Data"
+
+                    ]
+
+                ]
+
+            )
 
     # =====================================================
 
-    tabela = pd.DataFrame(registros)
+    tabela = pd.concat(
+        registros,
+        ignore_index=True
+    )
 
     if tabela.empty:
 
@@ -1744,34 +1932,18 @@ def render_extremos(
 
         asc = crescente
 
-    elif variavel == "Maior Temperatura Mínima":
+    elif variavel == "Menor Temperatura Mínima":
 
-        asc = crescente
+        asc = not crescente
+
 
     elif variavel == "Maior Chuva":
 
         asc = crescente
 
-    elif variavel == "Menor Chuva":
-
-        asc = not crescente
-
     elif variavel == "Maior Rajada":
 
         asc = crescente
-
-    elif variavel == "Menor Rajada":
-
-        asc = not crescente
-
-    elif variavel == "Menor Temperatura Máxima":
-
-        asc = not crescente
-
-    elif variavel == "Menor Temperatura Mínima":
-
-        asc = not crescente
-
     tabela = (
 
         tabela
@@ -1788,27 +1960,169 @@ def render_extremos(
 
     )
 
-    tabela["Data"] = (
-
-        tabela["Data"]
-
-        .dt.strftime("%d/%m/%Y")
-
-    )
-
     # =====================================================
     # TABELA
     # =====================================================
 
-    st.dataframe(
+    tabela_exibicao = tabela.copy()
 
-        tabela,
+    tabela_exibicao["Data"] = (
+        tabela_exibicao["Data"]
+        .dt.strftime("%d/%m/%Y")
+    )
+
+    if variavel == "Maior Chuva":
+
+        tabela_exibicao["Valor"] = tabela_exibicao["Valor"].map(
+            lambda x: f"{x:.1f} mm"
+        )
+
+    elif variavel == "Maior Rajada":
+
+        tabela_exibicao["Valor"] = tabela_exibicao["Valor"].map(
+            lambda x: f"{x:.1f} m/s"
+        )
+
+    else:
+
+        tabela_exibicao["Valor"] = tabela_exibicao["Valor"].map(
+            lambda x: f"{x:.1f} °C"
+        )
+
+    import plotly.graph_objects as go
+
+    # ===========================================
+    # TABELA DE EVENTOS
+    # ===========================================
+
+    tabela_plot = tabela_exibicao.copy()
+
+    # opcional: adiciona ranking
+    tabela_plot.insert(
+        0,
+        "Rank",
+        range(1, len(tabela_plot) + 1)
+    )
+
+    fig_table = go.Figure(
+
+        data=[
+
+            go.Table(
+
+                columnwidth=[0.10, 0.42, 0.18, 0.20],
+
+                header=dict(
+
+                    values=list(tabela_plot.columns),
+
+                    fill_color="#1f4e79",
+
+                    font=dict(
+
+                        color="white",
+
+                        size=13,
+
+                        family="Arial"
+
+                    ),
+
+                    align="center",
+
+                    height=34
+
+                ),
+
+                cells=dict(
+
+                    values=[
+
+                        tabela_plot[col]
+
+                        for col in tabela_plot.columns
+
+                    ],
+
+                    align="center",
+
+                    height=30,
+
+                    font=dict(
+
+                        size=12,
+
+                        family="Arial",
+
+                        color="#2c3e50"
+
+                    ),
+
+                    fill_color=[
+
+                        [
+
+                            "#FFFFFF"
+
+                            if i % 2 == 0
+
+                            else "#F5F7FA"
+
+                            for i in range(len(tabela_plot))
+
+                        ]
+
+                        for _ in tabela_plot.columns
+
+                    ]
+
+                )
+
+            )
+
+        ]
+
+    )
+
+    fig_table.update_layout(
+
+        margin=dict(
+
+            l=0,
+
+            r=0,
+
+            t=0,
+
+            b=10
+
+        ),
+
+        height=min(
+
+            900,
+
+            80 + len(tabela_plot) * 31
+
+        )
+
+    )
+
+    st.plotly_chart(
+
+        fig_table,
 
         use_container_width=True,
 
-        hide_index=True
+        config={
+
+            "displayModeBar": False
+
+        }
 
     )
+
+    
 
     # =====================================================
     # TOP 30 PARA O GRÁFICO
@@ -1823,27 +2137,19 @@ def render_extremos(
     # -----------------------------------------------------
 
     grafico["Rótulo"] = (
-
-        grafico["Estação"] + " · " + grafico["Data"]
-
+        grafico["Estação"]
+        + " · "
+        + grafico["Data"].dt.strftime("%d/%m/%Y")
     )
 
     fig = px.bar(
-
         grafico,
-
         x="Valor",
-
         y="Rótulo",
-
         orientation="h",
-
         text="Valor",
-
         color="Valor",
-
         hover_data=["Estação", "Data"]
-
     )
 
     fig.update_layout(
@@ -1865,9 +2171,7 @@ def render_extremos(
         coloraxis_showscale=False,
 
         yaxis=dict(
-
             autorange="reversed"
-
         )
 
     )
