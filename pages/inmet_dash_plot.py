@@ -432,6 +432,7 @@ def render():
         station_name = st.selectbox(
             "",
             list(stations.keys()),
+            key="estacao_principal",
             label_visibility="collapsed"
         )
 
@@ -536,7 +537,7 @@ def render():
                     value=min_date,
                     min_value=min_date,
                     max_value=max_date,
-                    key="start_date",
+                    key="periodo_inicio",
                     format="DD/MM/YYYY",
                     label_visibility="collapsed"
                 )
@@ -553,7 +554,7 @@ def render():
                     value=max_date,
                     min_value=min_date,
                     max_value=max_date,
-                    key="end_date",
+                    key="periodo_fim",
                     format="DD/MM/YYYY",
                     label_visibility="collapsed"
                 )
@@ -1473,24 +1474,10 @@ def render_extremos(
 
     with c0:
 
-        opcoes_estacao = ["Todas as estações"] + list(stations.keys())
-
-        indice_padrao = (
-            opcoes_estacao.index(station)
-            if station in opcoes_estacao
-            else 0
-        )
-
-        station = st.selectbox(
-
+        st.text_input(
             "Estação",
-
-            opcoes_estacao,
-
-            index=indice_padrao,
-
-            key="estacao_extremos"
-
+            value=station,
+            disabled=True
         )
 
     with c1:
