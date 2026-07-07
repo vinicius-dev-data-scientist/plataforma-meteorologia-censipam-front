@@ -339,7 +339,7 @@ def render():
         unsafe_allow_html=True,
     )
 
-    c1, c2, c3 = st.columns([1.8, 1.2, 3.1], gap="medium")
+    c1, c2, c3, c4 = st.columns([1.8, 1.2, 3.1], gap="medium")
 
     # =====================================================
     # PRODUTO
