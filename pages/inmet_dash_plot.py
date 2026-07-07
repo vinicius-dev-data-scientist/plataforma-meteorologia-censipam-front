@@ -339,7 +339,14 @@ def render():
         unsafe_allow_html=True,
     )
 
-    c1, c2, c3, c4 = st.columns([1.8, 1.2, 3.1], gap="medium")
+    # =====================================================
+    # FILTROS
+    # =====================================================
+
+    c1, c2, c3, c4 = st.columns(
+        [2.0, 1.6, 1.0, 1.0],
+        gap="small"
+    )
 
     # =====================================================
     # PRODUTO
@@ -347,11 +354,18 @@ def render():
 
     with c1:
 
-        st.markdown('<div class="filter-label">PRODUTO</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="filter-label">PRODUTO</div>',
+            unsafe_allow_html=True
+        )
 
         produto = st.radio(
             "",
-            ["Resumo Diário", "Eventos Extremos", "Registro Diário"],
+            [
+                "Resumo Diário",
+                "Eventos Extremos",
+                "Registro Diário"
+            ],
             horizontal=True,
             label_visibility="collapsed",
         )
@@ -362,17 +376,27 @@ def render():
 
     with c2:
 
-        st.markdown('<div class="filter-label">ESTAÇÃO</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="filter-label">ESTAÇÃO</div>',
+            unsafe_allow_html=True
+        )
 
         if produto == "Eventos Extremos":
 
-            station_options = ["Todas as estações", *stations.keys()]
+            station_options = [
+                "Todas as estações",
+                *stations.keys()
+            ]
 
         else:
 
             station_options = list(stations.keys())
 
-        station_name = st.selectbox("", station_options, label_visibility="collapsed")
+        station_name = st.selectbox(
+            "",
+            station_options,
+            label_visibility="collapsed"
+        )
 
     # =====================================================
     # CARREGA DADOS
@@ -389,11 +413,12 @@ def render():
         df = load_station_data(file_name)
 
         if df.empty:
+
             st.warning("Nenhum dado encontrado para esta estação.")
             return
 
     # =====================================================
-    # INTERVALO DE DATAS
+    # INTERVALO DISPONÍVEL
     # =====================================================
 
     if station_name == "Todas as estações":
@@ -413,18 +438,18 @@ def render():
             datas.append(d["data"])
 
         if not datas:
+
             st.warning("Nenhum dado encontrado.")
             return
 
-        datas = pd.concat(datas)
-
-        min_date = datas.min().date()
-        max_date = datas.max().date()
+        serie_datas = pd.concat(datas)
 
     else:
 
-        min_date = df["data"].min().date()
-        max_date = df["data"].max().date()
+        serie_datas = df["data"]
+
+    min_date = serie_datas.min().date()
+    max_date = serie_datas.max().date()
 
     if pd.isna(min_date) or pd.isna(max_date):
 
@@ -439,11 +464,14 @@ def render():
     # FILTROS DE DATA
     # =====================================================
 
-    with c3:
+    if produto == "Registro Diário":
 
-        if produto == "Registro Diário":
+        with c3:
 
-            st.markdown('<div class="filter-label">DATA</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="filter-label">DATA</div>',
+                unsafe_allow_html=True
+            )
 
             selected_date = st.date_input(
                 "",
@@ -454,44 +482,46 @@ def render():
                 label_visibility="collapsed",
             )
 
-        else:
+    else:
 
-            cc1, cc2 = st.columns(2)
+        default_start = max(
+            min_date,
+            max_date - timedelta(days=14)
+        )
 
-            with cc1:
+        with c3:
 
-                st.markdown(
-                    '<div class="filter-label">DATA INÍCIO</div>',
-                    unsafe_allow_html=True,
-                )
+            st.markdown(
+                '<div class="filter-label">DATA INÍCIO</div>',
+                unsafe_allow_html=True
+            )
 
-                default_start = max(min_date, max_date - timedelta(days=14))
+            start_date = st.date_input(
+                "",
+                value=default_start,
+                min_value=min_date,
+                max_value=max_date,
+                key="periodo_inicio",
+                format="DD/MM/YYYY",
+                label_visibility="collapsed",
+            )
 
-                start_date = st.date_input(
-                    "",
-                    value=default_start,
-                    min_value=min_date,
-                    max_value=max_date,
-                    key="periodo_inicio",
-                    format="DD/MM/YYYY",
-                    label_visibility="collapsed",
-                )
+        with c4:
 
-            with cc2:
+            st.markdown(
+                '<div class="filter-label">DATA FIM</div>',
+                unsafe_allow_html=True
+            )
 
-                st.markdown(
-                    '<div class="filter-label">DATA FIM</div>', unsafe_allow_html=True
-                )
-
-                end_date = st.date_input(
-                    "",
-                    value=max_date,
-                    min_value=min_date,
-                    max_value=max_date,
-                    key="periodo_fim",
-                    format="DD/MM/YYYY",
-                    label_visibility="collapsed",
-                )
+            end_date = st.date_input(
+                "",
+                value=max_date,
+                min_value=min_date,
+                max_value=max_date,
+                key="periodo_fim",
+                format="DD/MM/YYYY",
+                label_visibility="collapsed",
+            )
 
     # =====================================================
     # FILTRA DATA
@@ -860,7 +890,9 @@ def render_resumo(df, station_name, start_date, end_date, produto):
 
         fig_temp.update_layout(
             title=dict(
-                text="TEMPERATURA (°C)", x=0, font=dict(size=15, color="#374151")
+                text="<b>TEMPERATURA (°C)</b>",
+                x=0,
+                font=dict(size=15, color="#374151")
             ),
             height=350,
             paper_bgcolor="white",
@@ -887,9 +919,23 @@ def render_resumo(df, station_name, start_date, end_date, produto):
             # =========================
             # EIXO X
             # =========================
+
             xaxis=ptbr_xaxis(tickvals, ticktext),
-            yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,.05)"),
-        )
+
+            yaxis=dict(
+                title=dict(
+                    text="<b>°C</b>",
+                    font=dict(size=12, color="#374151")
+                ),
+                showgrid=True,
+                gridcolor="rgba(0,0,0,.05)",
+                tickfont=dict(
+                    size=11,
+                    color="#374151"
+                )
+            ),
+
+            )
 
         st.plotly_chart(fig_temp, use_container_width=True)
 
@@ -916,7 +962,7 @@ def render_resumo(df, station_name, start_date, end_date, produto):
 
         fig_umid.update_layout(
             title=dict(
-                text="UMIDADE MÁXIMA (%)", x=0, font=dict(size=15, color="#374151")
+                text="<b>UMIDADE MÁXIMA (%)</b>", x=0, font=dict(size=15, color="#374151")
             ),
             height=350,
             paper_bgcolor="white",
@@ -944,8 +990,20 @@ def render_resumo(df, station_name, start_date, end_date, produto):
             # EIXO X
             # =========================
             xaxis=ptbr_xaxis(tickvals, ticktext),
-            yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,.05)"),
-        )
+            yaxis=dict(
+                title=dict(
+                    text="<b>%</b>",
+                    font=dict(size=12, color="#374151")
+                ),
+                showgrid=True,
+                gridcolor="rgba(0,0,0,.05)",
+                tickfont=dict(
+                    size=11,
+                    color="#374151"
+                )
+            ),
+
+            )
 
         st.plotly_chart(fig_umid, use_container_width=True, config={"locale": "pt-BR"})
 
@@ -975,7 +1033,7 @@ def render_resumo(df, station_name, start_date, end_date, produto):
 
         fig_prec.update_layout(
             title=dict(
-                text="PRECIPITAÇÃO DIÁRIA (MM)",
+                text="<b>PRECIPITAÇÃO DIÁRIA (MM)</b>",
                 x=0,
                 font=dict(size=15, color="#374151"),
             ),
@@ -1044,7 +1102,7 @@ def render_resumo(df, station_name, start_date, end_date, produto):
 
         fig_vento.update_layout(
             title=dict(
-                text="ROSA DOS VENTOS", x=0, font=dict(size=15, color="#374151")
+                text="<b>ROSA DOS VENTOS</b>", x=0, font=dict(size=15, color="#374151")
             ),
             height=350,
             paper_bgcolor="white",

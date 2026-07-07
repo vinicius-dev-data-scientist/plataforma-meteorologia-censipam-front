@@ -121,8 +121,8 @@ def render():
             grid_c1, grid_c2 = st.columns(2)
             
             periodo_label = f"{i+1}º {lbl_escala}" if total > 1 else lbl_escala
-            titulo_acum = f"ACUMULADO — {i+1}º PERÍODO" if total > 1 else "ACUMULADO — MENSAL"
-            titulo_cat = f"CATEGÓRICO — {i+1}º PERÍODO" if total > 1 else "CATEGÓRICO — MENSAL"
+            titulo_acum = f"<b>ACUMULADO — {i+1}º PERÍODO</b>" if total > 1 else "<b>ACUMULADO — MENSAL</b>"
+            titulo_cat = f"<b>CATEGÓRICO — {i+1}º PERÍODO</b>" if total > 1 else "<b>CATEGÓRICO — MENSAL</b>    "
 
             with grid_c1:
                 map_card(titulo_acum, periodo_label, "verde", imgs_acum[i])
