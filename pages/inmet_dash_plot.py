@@ -8,6 +8,8 @@ from babel.dates import format_date
 import plotly.graph_objects as go
 import plotly.express as px
 
+from datetime import timedelta
+
 # =========================
 # PATHS
 # =========================
@@ -394,9 +396,9 @@ def metric_card(
 
 def render():
 
-    # =========================
+    # =====================================================
     # TÍTULO
-    # =========================
+    # =====================================================
 
     st.markdown("""
     <div class="main-title">
@@ -409,38 +411,16 @@ def render():
     </div>
     """, unsafe_allow_html=True)
 
-    # =========================
-    # FILTROS
-    # =========================
-
     c1, c2, c3 = st.columns(
         [1.5, 2.2, 2.3],
         gap="medium"
     )
 
-    # =========================
-    # ESTAÇÃO
-    # =========================
+    # =====================================================
+    # PRODUTO
+    # =====================================================
 
     with c1:
-
-        st.markdown(
-            '<div class="filter-label">ESTAÇÃO</div>',
-            unsafe_allow_html=True
-        )
-
-        station_name = st.selectbox(
-            "",
-            list(stations.keys()),
-            key="estacao_principal",
-            label_visibility="collapsed"
-        )
-
-    # =========================
-    # PRODUTO
-    # =========================
-
-    with c2:
 
         st.markdown(
             '<div class="filter-label">PRODUTO</div>',
@@ -458,48 +438,100 @@ def render():
             label_visibility="collapsed"
         )
 
-    # =========================
-    # LOAD DATA
-    # =========================
+    # =====================================================
+    # ESTAÇÃO
+    # =====================================================
 
-    file_name = stations[station_name]
+    with c2:
 
-    df = load_station_data(file_name)
-
-    if df.empty:
-
-        st.warning(
-            "Nenhum dado encontrado para esta estação."
+        st.markdown(
+            '<div class="filter-label">ESTAÇÃO</div>',
+            unsafe_allow_html=True
         )
-        return
 
-    # =========================
-    # DATAS DISPONÍVEIS
-    # =========================
+        if produto == "Eventos Extremos":
 
-    min_date = df["data"].min().date()
-    max_date = df["data"].max().date()
+            station_options = [
+                "Todas as estações",
+                *stations.keys()
+            ]
+
+        else:
+
+            station_options = list(stations.keys())
+
+        station_name = st.selectbox(
+            "",
+            station_options,
+            label_visibility="collapsed"
+        )
+
+    # =====================================================
+    # CARREGA DADOS
+    # =====================================================
+
+    if station_name == "Todas as estações":
+
+        df = pd.DataFrame()
+
+    else:
+
+        file_name = stations[station_name]
+
+        df = load_station_data(file_name)
+
+        if df.empty:
+            st.warning("Nenhum dado encontrado para esta estação.")
+            return
+
+    # =====================================================
+    # INTERVALO DE DATAS
+    # =====================================================
+
+    if station_name == "Todas as estações":
+
+        datas = []
+
+        for arquivo in stations.values():
+
+            if arquivo is None:
+                continue
+
+            d = load_station_data(arquivo)
+
+            if d.empty:
+                continue
+
+            datas.append(d["data"])
+
+        if not datas:
+            st.warning("Nenhum dado encontrado.")
+            return
+
+        datas = pd.concat(datas)
+
+        min_date = datas.min().date()
+        max_date = datas.max().date()
+
+    else:
+
+        min_date = df["data"].min().date()
+        max_date = df["data"].max().date()
 
     if pd.isna(min_date) or pd.isna(max_date):
 
-        st.warning(
-            "Dados de data inválidos."
-        )
+        st.warning("Dados de data inválidos.")
         return
 
     selected_date = None
     start_date = None
     end_date = None
 
-    # =========================
+    # =====================================================
     # FILTROS DE DATA
-    # =========================
+    # =====================================================
 
     with c3:
-
-        # =========================
-        # REGISTRO DIÁRIO
-        # =========================
 
         if produto == "Registro Diário":
 
@@ -517,10 +549,6 @@ def render():
                 label_visibility="collapsed"
             )
 
-        # =========================
-        # RESUMO + EXTREMOS
-        # =========================
-
         else:
 
             cc1, cc2 = st.columns(2)
@@ -532,9 +560,11 @@ def render():
                     unsafe_allow_html=True
                 )
 
+                default_start = max(min_date, max_date - timedelta(days=14))
+
                 start_date = st.date_input(
                     "",
-                    value=min_date,
+                    value=default_start,
                     min_value=min_date,
                     max_value=max_date,
                     key="periodo_inicio",
@@ -559,22 +589,25 @@ def render():
                     label_visibility="collapsed"
                 )
 
-    # =========================
-    # FILTRO POR DATA
-    # =========================
+    # =====================================================
+    # FILTRA DATA
+    # =====================================================
 
-    if produto != "Registro Diário":
+    if (
+        produto != "Registro Diário"
+        and station_name != "Todas as estações"
+        and start_date
+        and end_date
+    ):
 
-        if start_date and end_date:
+        df = df[
+            (df["data"].dt.date >= start_date)
+            & (df["data"].dt.date <= end_date)
+        ]
 
-            df = df[
-                (df["data"].dt.date >= start_date) &
-                (df["data"].dt.date <= end_date)
-            ]
-
-    # =========================
-    # PRODUTOS
-    # =========================
+    # =====================================================
+    # RENDERIZA
+    # =====================================================
 
     if produto == "Resumo Diário":
 
@@ -595,7 +628,7 @@ def render():
             data_fim=end_date
         )
 
-    elif produto == "Registro Diário":
+    else:
 
         render_registro_diario(
             df,
@@ -1470,31 +1503,18 @@ def render_extremos(
     # FILTROS DO PAINEL
     # =====================================================
 
-    c0, c1, c2, c3, c4 = st.columns([1.8, 2.2, 1.1, 1.1, 1])
-
-    with c0:
-
-        st.text_input(
-            "Estação",
-            value=station,
-            disabled=True
-        )
+    c1, c2, c3, c4 = st.columns([2.2, 1.1, 1.1, 1])
 
     with c1:
 
         variavel = st.selectbox(
-
             "Variável",
-
             [
-
                 "Maior Temperatura Máxima",
                 "Menor Temperatura Mínima",
                 "Maior Chuva",
                 "Maior Rajada"
-
             ]
-
         )
 
     # ------------------------------------
@@ -1571,33 +1591,46 @@ def render_extremos(
             value=False
 
         )
+   
+
+   # =====================================================
+    # REGRAS DAS VARIÁVEIS
     # =====================================================
-    # VARIÁVEL
-    # =====================================================
 
-    mapa = {
+    regras = {
 
-        "Maior Temperatura Máxima":
-            "temp_max",
+        "Maior Temperatura Máxima": {
+            "coluna": "temp_max",
+            "operacao": "max"
+        },
 
-        "Menor Temperatura Mínima":
-            "temp_min",
+        "Menor Temperatura Mínima": {
+            "coluna": "temp_min",
+            "operacao": "min"
+        },
 
-        "Maior Chuva":
-            "chuva",
+        "Maior Chuva": {
+            "coluna": "chuva",
+            "operacao": "sum"
+        },
 
-        "Maior Rajada":
-            "vento_raj",
+        "Maior Rajada": {
+            "coluna": "vento_raj",
+            "operacao": "max"
+        }
 
     }
 
-    coluna = mapa[variavel]
+    cfg = regras[variavel]
+
+    coluna = cfg["coluna"]
+    operacao = cfg["operacao"]
 
     registros = []
 
-    # ===========================================
-    # ESTAÇÃO SELECIONADA
-    # ===========================================
+    # =====================================================
+    # ESTAÇÕES
+    # =====================================================
 
     if station == "Todas as estações":
 
@@ -1605,48 +1638,26 @@ def render_extremos(
 
     else:
 
-        lista_estacoes = [
-
-            (
-
-                station,
-
-                stations[station]
-
-            )
-
-        ]
+        lista_estacoes = [(station, stations[station])]
 
     for nome_estacao, arquivo in lista_estacoes:
 
-        # -----------------------------
-        # se veio da página usa o df
-        # -----------------------------
-
-        if station != "Todas as estações":
-
-            df_est = df.copy()
-
-        else:
+        if station == "Todas as estações":
 
             df_est = load_station_data(arquivo)
 
+        else:
+
+            df_est = df.copy()
+
         if df_est.empty:
             continue
-
-        # -----------------------------
-        # Ano
-        # -----------------------------
 
         if ano != "Todos":
 
             df_est = df_est[
                 df_est["data"].dt.year == ano
             ]
-
-        # -----------------------------
-        # Mês
-        # -----------------------------
 
         if mes != "Todos":
 
@@ -1656,19 +1667,11 @@ def render_extremos(
                 df_est["data"].dt.month == numero_mes
             ]
 
-        # -----------------------------
-        # Data inicial
-        # -----------------------------
-
         if data_inicio is not None:
 
             df_est = df_est[
                 df_est["data"] >= pd.Timestamp(data_inicio)
             ]
-
-        # -----------------------------
-        # Data final
-        # -----------------------------
 
         if data_fim is not None:
 
@@ -1676,226 +1679,91 @@ def render_extremos(
                 df_est["data"] <= pd.Timestamp(data_fim)
             ]
 
-        # -----------------------------
-
         df_est = df_est.dropna(subset=[coluna])
-
-        # ======================================
-        # FILTROS POR VARIÁVEL
-        # ======================================
-
-        if variavel == "Maior Chuva":
-            df_est = df_est[df_est["chuva"] >= 15]
-
-        elif variavel == "Maior Rajada":
-            df_est = df_est[df_est["vento_raj"] > 0]
-
-        elif variavel == "Maior Temperatura Máxima":
-            df_est = df_est[df_est["temp_max"] > 0]
-
-        elif variavel == "Menor Temperatura Mínima":
-            df_est = df_est[df_est["temp_min"] > -20]
 
         if df_est.empty:
             continue
 
-        # =====================================================
-        # REGRAS DAS VARIÁVEIS
-        # =====================================================
+        df_eventos = (
 
-        regras = {
+            df_est
 
-            "Maior Temperatura Máxima": {
-                "coluna": "temp_max",
-                "operacao": "max"
+            .groupby(df_est["data"].dt.normalize())
+
+            .agg({
+
+                coluna: operacao
+
+            })
+
+            .reset_index()
+
+            .rename(columns={
+
+                "data": "Data"
+
+            })
+
+        )
+
+        if variavel == "Maior Chuva":
+
+            df_eventos = df_eventos[
+                df_eventos[coluna] >= 15
+            ]
+
+        elif variavel == "Maior Rajada":
+
+            df_eventos = df_eventos[
+                df_eventos[coluna] > 0
+            ]
+
+        elif variavel == "Maior Temperatura Máxima":
+
+            df_eventos = df_eventos[
+                df_eventos[coluna] > 0
+            ]
+
+        elif variavel == "Menor Temperatura Mínima":
+
+            df_eventos = df_eventos[
+                df_eventos[coluna] > -20
+            ]
+
+        if df_eventos.empty:
+            continue
+
+        df_eventos["Estação"] = nome_estacao
+
+        df_eventos.rename(
+
+            columns={
+
+                coluna: "Valor"
+
             },
 
-            "Menor Temperatura Mínima": {
-                "coluna": "temp_min",
-                "operacao": "min"
-            },
+            inplace=True
 
-            "Maior Chuva": {
-                "coluna": "chuva",
-                "operacao": "sum"
-            },
+        )
 
-            "Maior Rajada": {
-                "coluna": "vento_raj",
-                "operacao": "max"
-            }
+        registros.append(
 
-        }
+            df_eventos[
 
-        cfg = regras[variavel]
+                [
 
-        coluna = cfg["coluna"]
+                    "Estação",
 
-        operacao = cfg["operacao"]
+                    "Valor",
 
-        registros = []
+                    "Data"
 
-        # =====================================================
-        # ESTAÇÕES
-        # =====================================================
-
-        if station == "Todas as estações":
-
-            lista_estacoes = list(stations.items())
-
-        else:
-
-            lista_estacoes = [
-
-                (
-
-                    station,
-
-                    stations[station]
-
-                )
+                ]
 
             ]
 
-        for nome_estacao, arquivo in lista_estacoes:
-
-            if station == "Todas as estações":
-
-                df_est = load_station_data(arquivo)
-
-            else:
-
-                df_est = df.copy()
-
-            if df_est.empty:
-                continue
-
-            # -----------------------------------
-            # Filtros
-            # -----------------------------------
-
-            if ano != "Todos":
-
-                df_est = df_est[
-                    df_est["data"].dt.year == ano
-                ]
-
-            if mes != "Todos":
-
-                numero_mes = meses.index(mes)
-
-                df_est = df_est[
-                    df_est["data"].dt.month == numero_mes
-                ]
-
-            if data_inicio is not None:
-
-                df_est = df_est[
-                    df_est["data"] >= pd.Timestamp(data_inicio)
-                ]
-
-            if data_fim is not None:
-
-                df_est = df_est[
-                    df_est["data"] <= pd.Timestamp(data_fim)
-                ]
-
-            df_est = df_est.dropna(subset=[coluna])
-
-            if df_est.empty:
-                continue
-
-            # =====================================================
-            # EVENTOS DIÁRIOS
-            # =====================================================
-
-            df_eventos = (
-
-                df_est
-
-                .groupby(df_est["data"].dt.normalize())
-
-                .agg({
-
-                    coluna: operacao
-
-                })
-
-                .reset_index()
-
-                .rename(columns={
-
-                    "data": "Data"
-
-                })
-
-            )
-
-            # =====================================================
-            # FILTROS FÍSICOS
-            # =====================================================
-
-            if variavel == "Maior Chuva":
-
-                df_eventos = df_eventos[
-                    df_eventos[coluna] >= 15
-                ]
-
-            elif variavel == "Maior Rajada":
-
-                df_eventos = df_eventos[
-                    df_eventos[coluna] > 0
-                ]
-
-            elif variavel == "Maior Temperatura Máxima":
-
-                df_eventos = df_eventos[
-                    df_eventos[coluna] > 0
-                ]
-
-            elif variavel == "Menor Temperatura Mínima":
-
-                df_eventos = df_eventos[
-                    df_eventos[coluna] > -20
-                ]
-
-            if df_eventos.empty:
-                continue
-
-            df_eventos["Estação"] = nome_estacao
-
-            df_eventos.rename(
-
-                columns={
-
-                    coluna: "Valor",
-
-                    "data": "Data"
-
-                },
-
-                inplace=True
-
-            )
-
-            registros.append(
-
-                df_eventos[
-
-                    [
-
-                        "Estação",
-
-                        "Valor",
-
-                        "Data"
-
-                    ]
-
-                ]
-
-            )
-
+        )
     # =====================================================
 
     tabela = pd.concat(
