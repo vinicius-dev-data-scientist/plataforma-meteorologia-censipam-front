@@ -584,6 +584,36 @@ def build_month_ticks(df, col="data"):
     return tickvals, ticktext
 
 
+def build_daily_ticks(df, col="data"):
+
+    tickvals = pd.date_range(
+        df[col].min().normalize(),
+        df[col].max().normalize(),
+        freq="D"
+    )
+
+    ticktext = [
+        d.strftime("%d/%m")
+        for d in tickvals
+    ]
+
+    return tickvals, ticktext
+
+
+def build_hourly_ticks(df, col="data", intervalo="1H"):
+
+    tickvals = pd.date_range(
+        df[col].min(),
+        df[col].max(),
+        freq=intervalo
+    )
+
+    ticktext = [
+        d.strftime("%H:%M")
+        for d in tickvals
+    ]
+
+    return tickvals, ticktext
 # =========================
 # PROCESSA ROSA DOS VENTOS
 # =========================
@@ -834,7 +864,7 @@ def render_resumo(df, station_name, start_date, end_date, produto):
         .reset_index()
     )
 
-    tickvals, ticktext = build_month_ticks(df_daily)
+    tickvals, ticktext = build_daily_ticks(df_daily)
 
     def ptbr_xaxis(tickvals, ticktext):
 
@@ -842,10 +872,19 @@ def render_resumo(df, station_name, start_date, end_date, produto):
             tickmode="array",
             tickvals=tickvals,
             ticktext=ticktext,
-            showgrid=True,
-            gridcolor="rgba(0,0,0,.05)",
-        )
 
+            title=dict(
+                text="<b>Data</b>",
+                font=dict(size=13)
+            ),
+
+            tickfont=dict(size=11),
+
+            tickangle=0,
+
+            showgrid=True,
+            gridcolor="rgba(0,0,0,.05)"
+        )
     # =========================
     # GRÁFICOS
     # =========================
@@ -1044,7 +1083,7 @@ def render_resumo(df, station_name, start_date, end_date, produto):
             legend=dict(orientation="h", y=1.12, x=0),
             annotations=[
                 dict(
-                    text=(f"{period_label} · " f"Total {total_chuva:.1f} mm"),
+                    text=(f"{period_label} · " f"Total {total_chuva:.1f} mm · " f"{cidade}"),
                     x=1,
                     y=1.16,
                     xref="paper",
@@ -1060,7 +1099,18 @@ def render_resumo(df, station_name, start_date, end_date, produto):
             ],
             margin=dict(l=10, r=10, t=60, b=10),
             xaxis=ptbr_xaxis(tickvals, ticktext),
-            yaxis=dict(title="mm", showgrid=True, gridcolor="rgba(0,0,0,.05)"),
+            yaxis=dict(
+                title=dict(
+                    text="<b>mm</b>",
+                    font=dict(size=12, color="#374151")
+                ),
+                showgrid=True,
+                gridcolor="rgba(0,0,0,.05)",
+                tickfont=dict(
+                    size=11,
+                    color="#374151"
+                )
+            ),
         )
 
         st.plotly_chart(fig_prec, use_container_width=True, config={"locale": "pt-BR"})
@@ -1691,7 +1741,18 @@ def render_registro_diario(df, selected_date, station_name):
                 showgrid=True,
                 gridcolor="rgba(0,0,0,.05)",
             ),
-            yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,.05)"),
+            yaxis=dict(
+                title=dict(
+                    text="<b>°C</b>",
+                    font=dict(size=12, color="#374151")
+                ),
+                showgrid=True,
+                gridcolor="rgba(0,0,0,.05)",
+                tickfont=dict(
+                    size=11,
+                    color="#374151"
+                )
+            ),
         )
 
         st.plotly_chart(fig_temp, use_container_width=True, config={"locale": "pt-BR"})
@@ -1756,7 +1817,17 @@ def render_registro_diario(df, selected_date, station_name):
                 gridcolor="rgba(0,0,0,.05)",
             ),
             yaxis=dict(
-                range=[y_min, y_max], showgrid=True, gridcolor="rgba(0,0,0,.05)"
+                title=dict(
+                    text="<b>%</b>",
+                    font=dict(size=12, color="#374151")
+                ),
+                range=[y_min, y_max],
+                showgrid=True,
+                gridcolor="rgba(0,0,0,.05)",
+                tickfont=dict(
+                    size=11,
+                    color="#374151"
+                )
             ),
         )
 
@@ -1809,7 +1880,19 @@ def render_registro_diario(df, selected_date, station_name):
                 )
             ],
             xaxis=dict(dtick=21600000, tickformat="%H:%M", showgrid=False),
-            yaxis=dict(title="mm", showgrid=True, gridcolor="rgba(0,0,0,.05)"),
+            yaxis=dict(
+                title=dict(
+                    text="<b>mm</b>",
+                    font=dict(size=12, color="#374151")
+                ),
+                range=[y_min, y_max],
+                showgrid=True,
+                gridcolor="rgba(0,0,0,.05)",
+                tickfont=dict(
+                    size=11,
+                    color="#374151"
+                )
+            ),
         )
         st.plotly_chart(fig_prec, use_container_width=True, config={"locale": "pt-BR"})
 
