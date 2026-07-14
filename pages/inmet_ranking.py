@@ -1,5 +1,6 @@
 import streamlit as st
 import plotly.graph_objects as go
+import pandas as pd
 
 from pages.inmet_dash_plot import load_station_data, filter_period
 # =========================
@@ -105,8 +106,12 @@ def render():
 
             if variavel == "Maior Temperatura":
 
-                valor = df["temp_max"].max()
+                serie = df["temp_max"].dropna()
 
+                if serie.empty:
+                    continue
+
+                valor = serie.max()
                 unidade = "°C"
 
             # =========================
@@ -115,8 +120,12 @@ def render():
 
             elif variavel == "Maior Precipitação":
 
-                valor = df["chuva"].sum()
+                serie = df["chuva"].dropna()
 
+                if serie.empty:
+                    continue
+
+                valor = serie.sum()
                 unidade = "mm"
 
             # =========================
@@ -125,19 +134,28 @@ def render():
 
             else:
 
-                valor = df["vento_raj"].max()
+                serie = df["vento_raj"].dropna()
 
+                if serie.empty:
+                    continue
+
+                valor = serie.max()
                 unidade = "m/s"
-    
-            ranking_data.append({
 
-                "cidade": cidade,
-                "valor": round(valor, 1),
-                "unidade": unidade
-            })
+            # Segurança extra
+            if pd.isna(valor):
+                continue
 
-        except:
-            pass
+            ranking_data.append(
+                {
+                    "cidade": cidade,
+                    "valor": round(float(valor), 1),
+                    "unidade": unidade,
+                }
+            )
+
+        except Exception:
+            continue
 
     # =========================
     # ORDENA
@@ -146,8 +164,13 @@ def render():
     ranking_data = sorted(
         ranking_data,
         key=lambda x: x["valor"],
-        reverse=True
+        reverse=True,
     )
+
+    if not ranking_data:
+
+        st.info("Nenhum dado disponível para o período selecionado.")
+        return
 
     # =========================
     # DATAFRAME

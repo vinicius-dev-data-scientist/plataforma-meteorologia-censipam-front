@@ -1404,45 +1404,6 @@ def render_extremos(df, station, data_inicio, data_fim):
 
     tabela_plot = tabela_exibicao.copy()
 
-    # opcional: adiciona ranking
-    # tabela_plot.insert(0, "Rank", range(1, len(tabela_plot) + 1))
-
-    # fig_table = go.Figure(
-    #     data=[
-    #         go.Table(
-    #             columnwidth=[0.10, 0.42, 0.18, 0.20],
-    #             header=dict(
-    #                 values=list(tabela_plot.columns),
-    #                 fill_color="#1f4e79",
-    #                 font=dict(color="white", size=13, family="Arial"),
-    #                 align="center",
-    #                 height=34,
-    #             ),
-    #             cells=dict(
-    #                 values=[tabela_plot[col] for col in tabela_plot.columns],
-    #                 align="center",
-    #                 height=30,
-    #                 font=dict(size=12, family="Arial", color="#2c3e50"),
-    #                 fill_color=[
-    #                     [
-    #                         "#FFFFFF" if i % 2 == 0 else "#F5F7FA"
-    #                         for i in range(len(tabela_plot))
-    #                     ]
-    #                     for _ in tabela_plot.columns
-    #                 ],
-    #             ),
-    #         )
-    #     ]
-    # )
-
-    # fig_table.update_layout(
-    #     margin=dict(l=0, r=0, t=0, b=10), height=min(900, 80 + len(tabela_plot) * 31)
-    # )
-
-    # st.plotly_chart(
-    #     fig_table, use_container_width=True, config={"displayModeBar": False}
-    # )
-    
     tabela_plot.insert(
         0,
         "Rank",
