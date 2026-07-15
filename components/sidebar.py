@@ -101,7 +101,11 @@ def render_sidebar():
                 Radar
                 </div>
                 <div class="submenu">
-                    <div class="submenu-item">CAPPI — Radar SBMN</div>
+                    <a href="?page=radar"
+                    target="_self"
+                    class="submenu-item {'active' if active_page == 'radar' else ''}">
+                    CAPPI — Radar SBMN
+                    </a>
                 </div>
             </div>
         </div>

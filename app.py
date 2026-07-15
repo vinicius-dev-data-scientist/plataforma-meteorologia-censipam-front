@@ -110,8 +110,8 @@ def render_page(page: str):
         inmet_ranking.render()
 
     elif page == "radar":
-        from pages import rads_obs
-        rads_obs.render()
+        from pages import rads_obs2
+        rads_obs2.render()
 
     else:
         # Página inicial / fallback
