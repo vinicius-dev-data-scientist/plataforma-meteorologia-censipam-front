@@ -10,6 +10,7 @@ import plotly.express as px
 
 from datetime import timedelta
 
+
 # =========================
 # PATHS
 # =========================
@@ -547,7 +548,10 @@ def render():
     elif produto == "Eventos Extremos":
 
         render_extremos(
-            df=df, station=station_name, data_inicio=start_date, data_fim=end_date
+            df=df,
+            station=station_name,
+            data_inicio=start_date,
+            data_fim=end_date,
         )
 
     else:
@@ -1342,6 +1346,14 @@ def render_extremos(df, station, data_inicio, data_fim):
 
         registros.append(df_eventos[["Estação", "Valor", "Data"]])
     # =====================================================
+    
+    if not registros:
+
+        st.info(
+            "Nenhum evento encontrado para os filtros selecionados."
+        )
+
+        return
 
     tabela = pd.concat(registros, ignore_index=True)
 
