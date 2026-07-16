@@ -16,6 +16,7 @@ def render_sidebar():
     icon_satelite  = load_img_base64(os.path.join(icon_dir, "icon_satelite.png"))
     icon_modelagem = load_img_base64(os.path.join(icon_dir, "icon_modelagem.png"))
     icon_radar     = load_img_base64(os.path.join(icon_dir, "icon_radar.png"))
+    icon_clima     = load_img_base64(os.path.join(icon_dir, "icon_clima.png"))
 
     def load_logo_base64(path):
         with open(path, "rb") as img:
@@ -59,6 +60,19 @@ def render_sidebar():
             </div>
             <div class="menu-item">
                 <div class="menu-title">
+                <img src="data:image/png;base64,{icon_clima}" class="menu-icon"/>
+                Clima
+                </div>
+                <div class="submenu">
+                    <a href="?page=clima"
+                    target="_self"
+                    class="submenu-item {'active' if active_page == 'clima' else ''}">
+                    Observações Climatológicas
+                    </a>
+                </div>
+            </div>
+            <div class="menu-item">
+                <div class="menu-title">
                 <img src="data:image/png;base64,{icon_satelite}" class="menu-icon"/>
                 Satélite
                 </div>
@@ -77,11 +91,6 @@ def render_sidebar():
                     target="_self"
                     class="submenu-item {'active' if active_page == 'goes_monitoramento' else ''}">
                     GOES - Imagens
-                    </a>
-                    <a href="?page=clima"
-                    target="_self"
-                    class="submenu-item {'active' if active_page == 'clima' else ''}">
-                    Clima
                     </a>
                 </div>
             </div>

@@ -14,8 +14,6 @@ BASE_DIR = os.path.dirname(
     )
 )
 
-# Se sua pasta 'img' estiver dentro de 'static', mude para:
-# PATH_IMGS = os.path.join(BASE_DIR, "static", "img", "Figuras")
 PATH_IMGS = os.path.join(
     BASE_DIR,
     "img",
@@ -100,19 +98,23 @@ def carregar_clima_separado(ano, mes, dia):
 # COMPONENTE VISUAL PADRONIZADO (CARD)
 # =====================================================
 
-def render_map_card(titulo, img_base64, max_height=480):
+def render_map_card(titulo, img_base64, max_height=None):
     """
-    Gera o card de visualização padronizando o tamanho das imagens
-    e garantindo responsividade perfeita para os mapas climáticos.
+    Gera o card de visualização mantendo a proporção real da imagem.
+    Adiciona margens de segurança (max-width: 95%) para evitar cortes nas bordas.
     """
+    style_img = "max-width: 95%; height: auto; display: block; margin: 0 auto; border-radius: 4px;"
+    if max_height:
+        style_img += f" max-height: {max_height}px; object-fit: contain;"
+
     st.markdown(
         f"""
         <div class="map-card" style="margin-bottom: 20px;">
             <div class="map-card-header">
                 <span>{titulo}</span>
             </div>
-            <div class="map-card-body" style="display: flex; justify-content: center; align-items: center; background: #F9FAFB; padding: 10px; border-radius: 0 0 8px 8px;">
-                <img src="{img_base64}" style="max-width: 100%; height: auto; max-height: {max_height}px; object-fit: contain; border-radius: 4px;" />
+            <div class="map-card-body" style="display: flex; justify-content: center; align-items: center; background: #F9FAFB; padding: 15px; border-radius: 0 0 8px 8px;">
+                <img src="{img_base64}" style="{style_img}" />
             </div>
         </div>
         """,
@@ -165,7 +167,7 @@ def render():
         )
         return
 
-    # Interface de Seleção usando st.radio Horizontal (Estilo Merge Clima)
+    # Interface de Seleção usando st.radio Horizontal
     st.markdown("<br>", unsafe_allow_html=True)
     
     categoria_selecionada = st.radio(
@@ -188,27 +190,46 @@ def render():
     # LAYOUT PERSONALIZADO PARA SST
     # =====================================================
     if categoria_selecionada == "SST":
-        # Separar índices dos mapas espaciais
+        # Separar listas para organizar na tela de acordo com os filtros de nomes
         indices = []
+        evolucoes_atlantico = []
+        evolucoes_pacifico = []
         mapas_espaciais = []
         
         for item in imagens_exibicao:
-            if "indice" in item["nome_original"]:
+            nome_norm = item["nome_original"]
+            if "indice" in nome_norm:
                 indices.append(item)
+            elif "evolucao" in nome_norm and "atlantico" in nome_norm:
+                evolucoes_atlantico.append(item)
+            elif "evolucao" in nome_norm and "pacifico" in nome_norm:
+                evolucoes_pacifico.append(item)
             else:
                 mapas_espaciais.append(item)
 
-        # 1. Mostrar os Índices lado a lado (2 colunas)
+        # 1º: ÍNDICES SST (Lado a Lado - 2 Colunas)
         if indices:
             cols_ind = st.columns(2)
             for idx, item in enumerate(indices):
                 col_atual = cols_ind[idx % 2]
                 with col_atual:
-                    render_map_card(item["titulo"], item["img"], max_height=420)
+                    render_map_card(item["titulo"], item["img"], max_height=None)
 
-        # 2. Mostrar os mapas de SST empilhados (Largura total, um abaixo do outro)
+        # 2º: EVOLUÇÃO ATLÂNTICO (Lado a Lado - 2 Colunas - Logo abaixo dos índices)
+        if evolucoes_atlantico:
+            cols_evo_atl = st.columns(2)
+            for idx, item in enumerate(evolucoes_atlantico):
+                col_atual = cols_evo_atl[idx % 2]
+                with col_atual:
+                    render_map_card(item["titulo"], item["img"], max_height=None)
+
+        # 3º: EVOLUÇÃO PACÍFICO (Um embaixo do outro - Largura Total)
+        if evolucoes_pacifico:
+            for item in evolucoes_pacifico:
+                render_map_card(item["titulo"], item["img"], max_height=500)
+
+        # 4º: MAPAS ESPACIAIS DE SST (Um embaixo do outro - No final da página)
         for item in mapas_espaciais:
-            # Aumentamos o max_height para 650px para dar uma visão bem ampliada de cada mapa espacial
             render_map_card(item["titulo"], item["img"], max_height=650)
 
     # =====================================================
