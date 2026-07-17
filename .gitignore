@@ -16,3 +16,6 @@ static/
 
 .env
 dados.zip
+
+ecmwf/dados/
+ecmwf/FIGS_AMZ_PREC
