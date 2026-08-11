@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import numpy as np
 import streamlit as st
 
 import plotly.graph_objects as go
@@ -480,6 +481,7 @@ def render():
                 max_value=max_date,
                 format="DD/MM/YYYY",
                 label_visibility="collapsed",
+                key="selected_date"
             )
 
     else:
@@ -622,24 +624,49 @@ def build_hourly_ticks(df, col="data", intervalo="1H"):
 # =========================
 
 
-def process_wind_rose(df):
+def process_wind_rose(df_filtrado):
+    # Pega apenas os dados do dia filtrado
+    vento = df_filtrado[['vento_vel', 'vento_dir']]
+    vento.columns = ['Vel.', 'Dire.']
+    
+    nbins= 8
+    #bins = [-0.1, 22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5, 360.1]
+    
+    bins = np.linspace(0,360, nbins + 1)
+    
+    vento.loc[:, 'dir_bin'] = pd.cut(vento['Dire.'],bins=bins, labels = ['N', 'NE', 'L', 'SE', 'S', 'SO', 'O', 'NO'], include_lowest=True)
 
-    # =========================
-    # CONVERTE GRAUS -> DIREÇÃO
-    # =========================
+    
+    # Agrupa mediana da velocidade e contagem de horas do dia
+    vento_rosa = vento.groupby('dir_bin', observed=False).agg({'Vel.': ['median', 'count']}).reset_index()
+    
+    vento_rosa.columns = ['Dire.', 'Vel.', 'Contar']
+    
+    return vento_rosa.sort_values('Dire.')
 
-    def grau_para_direcao(grau):
 
-        if pd.isna(grau):
-            return None
-
-        grau = float(grau)
-
-        setores = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"]
-
-        indice = int((grau + 22.5) // 45) % 8
-
-        return setores[indice]
+def gerar_figura_vento(vento_rosa):
+    fig_vento = px.bar_polar(
+        vento_rosa, 
+        r='Contar', 
+        theta='Dire.', 
+        color='Vel.',
+        color_continuous_scale=px.colors.sequential.YlGnBu,
+        template='plotly_white'
+    )
+    
+    # Ajuste de layout para bater exatamente com a rotação do inmet_dash2
+    fig_vento.update_layout(
+        height=350,
+        margin=dict(l=20, r=20, t=30, b=20),
+        polar=dict(
+            angularaxis=dict(
+                direction='clockwise', # Garante rotação no sentido horário
+                rotation=90            # Coloca o Norte no topo (12h)
+            )
+        )
+    )
+    return fig_vento
 
     # =========================
     # DIREÇÃO CONVERTIDA
@@ -1119,58 +1146,12 @@ def render_resumo(df, station_name, start_date, end_date, produto):
         st.plotly_chart(fig_prec, use_container_width=True, config={"locale": "pt-BR"})
 
     # =========================
-    # ROSA DOS VENTOS
+    # ROSA DOS VENTOS (RESUMO)
     # =========================
-
     with c4:
-
-        direcoes, freq, vel_media = process_wind_rose(df)
-
-        fig_vento = go.Figure()
-
-        fig_vento.add_trace(
-            go.Barpolar(
-                r=freq,
-                theta=direcoes,
-                marker=dict(
-                    color=vel_media,
-                    colorscale=[
-                        [0.0, "#F6F5C9"],
-                        [0.2, "#DDECB2"],
-                        [0.4, "#9ED9C3"],
-                        [0.6, "#5CB7D6"],
-                        [0.8, "#2F6DB3"],
-                        [1.0, "#1B1F6B"],
-                    ],
-                    colorbar=dict(title="m/s"),
-                    line=dict(color="white", width=1.5),
-                ),
-                opacity=0.95,
-                hovertemplate="<b>%{theta}</b><br>"
-                + "Frequência: %{r}<br>"
-                + "Vel. Média: %{marker.color:.1f} m/s"
-                + "<extra></extra>",
-            )
-        )
-
-        fig_vento.update_layout(
-            title=dict(
-                text="<b>ROSA DOS VENTOS</b>", x=0, font=dict(size=15, color="#374151")
-            ),
-            height=350,
-            paper_bgcolor="white",
-            plot_bgcolor="white",
-            polar=dict(
-                bgcolor="white",
-                radialaxis=dict(
-                    showticklabels=True, ticks="", gridcolor="rgba(0,0,0,.08)"
-                ),
-                angularaxis=dict(direction="clockwise", rotation=90),
-            ),
-            margin=dict(l=10, r=10, t=60, b=10),
-            showlegend=False,
-        )
-
+        # Processa o vento de acordo com o DataFrame já filtrado por data/período
+        vento_rosa = process_wind_rose(df)
+        fig_vento = gerar_figura_vento(vento_rosa)
         st.plotly_chart(fig_vento, use_container_width=True, config={"locale": "pt-BR"})
 
 
@@ -1805,15 +1786,13 @@ def render_registro_diario(df, selected_date, station_name):
 
         st.plotly_chart(fig_umid, use_container_width=True, config={"locale": "pt-BR"})
 
+# =========================
+    # PRECIPITAÇÃO + ROSA (REGISTRO DIÁRIO)
     # =========================
-    # PRECIPITAÇÃO + ROSA
-    # =========================
-
     c3, c4 = st.columns(2)
 
-    # PRECIPITAÇÃO
+    # PRECIPITAÇÃO HORÁRIA
     with c3:
-
         fig_prec = go.Figure()
 
         fig_prec.add_trace(
@@ -1857,7 +1836,7 @@ def render_registro_diario(df, selected_date, station_name):
                     text="<b>mm</b>",
                     font=dict(size=12, color="#374151")
                 ),
-                range=[y_min, y_max],
+                # Removido o range fixo da umidade para ajustar o eixo Y automaticamente à chuva
                 showgrid=True,
                 gridcolor="rgba(0,0,0,.05)",
                 tickfont=dict(
@@ -1868,53 +1847,9 @@ def render_registro_diario(df, selected_date, station_name):
         )
         st.plotly_chart(fig_prec, use_container_width=True, config={"locale": "pt-BR"})
 
-    # ROSA DOS VENTOS
+    # ROSA DOS VENTOS HORÁRIA
     with c4:
-
-        direcoes, freq, vel_media = process_wind_rose(df_day)
-
-        fig_vento = go.Figure()
-
-        fig_vento.add_trace(
-            go.Barpolar(
-                r=freq,
-                theta=direcoes,
-                marker=dict(
-                    color=vel_media,
-                    colorscale=[
-                        [0.0, "#F6F5C9"],
-                        [0.2, "#DDECB2"],
-                        [0.4, "#9ED9C3"],
-                        [0.6, "#5CB7D6"],
-                        [0.8, "#2F6DB3"],
-                        [1.0, "#1B1F6B"],
-                    ],
-                    colorbar=dict(title="m/s"),
-                    line=dict(color="white", width=1.5),
-                ),
-                hovertemplate="<b>%{theta}</b><br>"
-                + "Frequência: %{r}<br>"
-                + "Vel. Média: %{marker.color:.1f} m/s"
-                + "<extra></extra>",
-            )
-        )
-
-        fig_vento.update_layout(
-            title=dict(
-                text="ROSA DOS VENTOS", x=0, font=dict(size=15, color="#374151")
-            ),
-            height=350,
-            paper_bgcolor="white",
-            plot_bgcolor="white",
-            polar=dict(
-                bgcolor="white",
-                radialaxis=dict(
-                    showticklabels=True, ticks="", gridcolor="rgba(0,0,0,.08)"
-                ),
-                angularaxis=dict(direction="clockwise", rotation=90),
-            ),
-            margin=dict(l=10, r=10, t=60, b=10),
-            showlegend=False,
-        )
-
+        # Passa apenas o df_day do dia selecionado
+        vento_rosa = process_wind_rose(df_day)
+        fig_vento = gerar_figura_vento(vento_rosa)
         st.plotly_chart(fig_vento, use_container_width=True, config={"locale": "pt-BR"})

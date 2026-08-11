@@ -108,6 +108,14 @@ def render_page(page: str):
     elif page == "inmet_ranking":
         from pages import inmet_ranking
         inmet_ranking.render()
+        
+    elif page == "merge_acumulado":
+        from pages import merge_acumulado
+        merge_acumulado.render()
+    
+    elif page == "merge_dias":
+        from pages import merge_dias
+        merge_dias.render()
 
     elif page == "radar":
         from pages import rads_obs2

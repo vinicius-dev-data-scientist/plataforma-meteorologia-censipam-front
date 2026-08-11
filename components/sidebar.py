@@ -92,6 +92,16 @@ def render_sidebar():
                     class="submenu-item {'active' if active_page == 'goes_monitoramento' else ''}">
                     GOES - Imagens
                     </a>
+                    <a href="?page=merge_acumulado"
+                    target="_self"
+                    class="submenu-item {'active' if active_page == 'merge_acumulado' else ''}">
+                    Merge Acumulado
+                    </a>
+                    <a href="?page=merge_dias"
+                    target="_self"
+                    class="submenu-item {'active' if active_page == 'merge_dias' else ''}">
+                    Merge Dias
+                    </a>
                 </div>
             </div>
             <div class="menu-item">
