@@ -162,6 +162,13 @@ def render():
         texttemplate=f'%{{text:.1f}}{sufixo_unidade}',
         textposition='inside',
         insidetextanchor='end',
+        # Configura a fonte dos valores internos da barra (Cor Branca + Tamanho Maior)
+        textfont=dict(
+            color='#FFFFFF',
+            size=16,
+            family='Arial', 
+            weight='bold'
+        ),
         hovertemplate='<b>%{y}</b><br>' + f'{prefixo_var}: ' + '<b>%{x:.1f}' + f'{sufixo_unidade}</b><extra></extra>'
     )
 
@@ -169,21 +176,31 @@ def render():
         xaxis_title=opcao_metrica,
         yaxis_title=None,
         margin=dict(l=20, r=20, t=10, b=10),
-        height=120 + (top_n * 32),  # Altura dinâmica proporcional
+        height=120 + (top_n * 32),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(size=12)
+        # Define a fonte global (eixo Y, títulos, etc.) para PRETO e NEGRITO
+        font=dict(
+            color='#000000',
+            size=12,
+            family='Arial',
+            weight='bold'
+        )
     )
 
     fig.update_xaxes(
         showgrid=True,
         gridcolor='#F3F4F6',
-        zeroline=False
+        zeroline=False,
+        tickfont=dict(color='#000000', size=12, family='Arial', weight='bold'),
+        title_font=dict(size=12, family='Arial', color='#000000', weight='bold')
     )
     
     fig.update_yaxes(
         tickmode='linear',
-        showgrid=False
+        showgrid=False,
+        tickfont=dict(color='#000000', size=12, family='Arial', weight='bold'),
+        title_font=dict(size=12, family='Arial', color='#000000', weight='bold')
     )
 
     st.plotly_chart(fig, use_container_width=True)

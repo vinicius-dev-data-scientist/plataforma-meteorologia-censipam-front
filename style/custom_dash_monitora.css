@@ -83,7 +83,7 @@ header[data-testid="stHeader"] {
    SUBMENU ABERTO SE ATIVO
 ========================= */
 .menu-item:has(.submenu-item.active) .submenu {
-  max-height: 200px;
+  max-height: 500px;
 }
 
 /* =========================
@@ -253,7 +253,7 @@ header[data-testid="stHeader"] {
 
 /* EXPANSÃO */
 .menu-item:hover .submenu {
-  max-height: 200px;
+  max-height: 500px;
 }
 
 /* =========================
@@ -349,7 +349,7 @@ div[role="radiogroup"] input:checked + div {
 
 .map-card-body {
   padding: 0;
-  height: 500px;
+  height: 800px;
   display: flex;
   align-items: center;
   justify-content: center;

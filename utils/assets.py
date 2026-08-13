@@ -60,3 +60,21 @@ def load_images(prefix, filtro):
     print("TOTAL:", len(images))
 
     return images
+
+def load_images_merge(prefix, filtro="", folder_name="Merge_Acumulado"):
+    """
+    Carrega imagens em base64 localizadas na subpasta especificada dentro de 'img/Figuras'.
+    """
+    images = []
+    target_dir = os.path.join(PATH_IMGS, folder_name)
+
+    if not os.path.exists(target_dir):
+        print("PASTA NÃO EXISTE:", target_dir)
+        return images
+
+    for f in sorted(os.listdir(target_dir)):
+        if prefix.lower() in f.lower() and filtro.lower() in f.lower():
+            full_path = os.path.join(target_dir, f)
+            images.append(load_img_base64(full_path))
+
+    return images

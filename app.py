@@ -102,8 +102,8 @@ def render_page(page: str):
         goes_monitoramento.render()
 
     elif page == "inmet":
-        from pages import inmet_dash_plot
-        inmet_dash_plot.render()
+        from pages import inmet_dash_plot3
+        inmet_dash_plot3.render()
 
     elif page == "inmet_ranking":
         from pages import inmet_ranking
