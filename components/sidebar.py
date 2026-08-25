@@ -82,6 +82,11 @@ def render_sidebar():
                     class="submenu-item {'active' if active_page == 'merge_climatologia' else ''}">
                     Merge Climatologia
                     </a>
+                    <a href="?page=extracao_plot_merge"
+                    target="_self"
+                    class="submenu-item {'active' if active_page == 'extracao_plot_merge' else ''}">
+                    Merge - Gráficos
+                    </a>
                     <a href="?page=merge_diario"
                     target="_self"
                     class="submenu-item {'active' if active_page == 'merge_diario' else ''}">

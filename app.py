@@ -88,6 +88,10 @@ def render_page(page: str):
     if page == "merge_climatologia":
         from pages import merge_clima
         merge_clima.render()
+        
+    elif page == "extracao_plot_merge":
+        from pages import extracao_e_plot_merge
+        extracao_e_plot_merge.render()
 
     elif page == "merge_diario":
         from pages import merge_diario_cptec

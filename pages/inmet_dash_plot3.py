@@ -1892,7 +1892,6 @@ def render_registro_diario(
     df_day = df[
         df["data"].dt.date == selected_date
     ]
-    #st.write(df_day["vento_dir"].unique())
 
     df_day = df_day.copy()
 
@@ -1916,6 +1915,7 @@ def render_registro_diario(
     temp_min = df_day["temp_min"].min()
 
     umi_max = df_day["umi_max"].max()
+    umi_min = df_day["umi_min"].min()
 
     chuva_total = df_day["chuva"].sum()
 
@@ -1944,6 +1944,7 @@ def render_registro_diario(
         temp_min_prev = df_prev["temp_min"].min()
 
         umi_prev = df_prev["umi_max"].max()
+        umi_min_prev = df_prev["umi_min"].min()
 
         chuva_prev = df_prev["chuva"].sum()
 
@@ -1955,6 +1956,7 @@ def render_registro_diario(
         temp_min_prev = temp_min
 
         umi_prev = umi_max
+        umi_min_prev = umi_min
 
         chuva_prev = chuva_total
 
@@ -1968,6 +1970,7 @@ def render_registro_diario(
     diff_temp_min = temp_min - temp_min_prev
 
     diff_umi = umi_max - umi_prev
+    diff_umi_min = umi_min - umi_min_prev
 
     diff_chuva = chuva_total - chuva_prev
 
@@ -2222,7 +2225,7 @@ def render_registro_diario(
 
                 mode="markers+lines",
 
-                name="Umidade",
+                name="Máx.(%)",
 
                 line=dict(
                     color="#16A34A",
@@ -2230,15 +2233,48 @@ def render_registro_diario(
                     shape="linear"
                 ),
 
-                fill="tozeroy",
+                fill=None,
 
-                fillcolor="rgba(22,163,74,.08)"
+                fillcolor="rgba(22,163,74,.08)",
+
+                marker=dict(
+                    size=10,
+                    color="#16A34A",
+                    symbol="circle"
+                )
+            )
+        )
+
+        fig_umid.add_trace(
+            go.Scatter(
+                x=df_day["hora_formatada"],
+                y=df_day["umi_min"],
+
+                mode="markers+lines",
+
+                name="Mín.(%)",
+
+                line=dict(
+                    color="#F5B027",
+                    width=3,
+                    shape="linear"
+                ),
+
+                fill=None,
+
+                fillcolor="rgba(22,163,74,.08)",
+
+                marker=dict(
+                    size=10,
+                    color="#F5B027",
+                    symbol="circle"
+                )
             )
         )
 
         y_min = max(
             0,
-            df_day["umi_max"].min() - 10
+            df_day["umi_min"].min() - 10
         )
 
         y_max = min(
@@ -2250,7 +2286,7 @@ def render_registro_diario(
         fig_umid.update_layout(
 
             title=dict(
-                text="UMIDADE MÁXIMA HORÁRIA (%)",
+                text="UMIDADE HORÁRIA (%)",
                 x=0,
 
                 font=dict(
