@@ -31,18 +31,17 @@ def render():
         with col_periodo:
             periodo = st.selectbox(
                 "PERÍODO",
-                ["Últimos 30 dias", "Últimos 15 dias", "Este mês"],
+                ["Últimos 30 dias", "Últimos 15 dias", "Este mês", "Por dia"],
                 index=0
             )
 
         with col_v:
-            # Lista de métricas expandida conforme solicitado
             opcao_metrica = st.selectbox(
                 "MÉTRICA",
                 [
                     "Temperatura Máxima (°C)", 
                     "Temperatura Mínima (°C)", 
-                    "Precipitação Acumulada (> 15mm)", 
+                    "Precipitação Acumulada", 
                     "Maior Rajada de Vento (m/s)"
                 ],
                 index=0
@@ -58,10 +57,9 @@ def render():
             )
 
         with col_ordem:
-            # Define o comportamento padrão da ordenação dependendo da métrica escolhida
             default_index = 0
             if "Mínima" in opcao_metrica:
-                default_index = 1  # Para temperatura mínima, o padrão mais interessante é o menor valor (recorde de frio)
+                default_index = 1
 
             ordem_sel = st.selectbox(
                 "ORDENAÇÃO",
@@ -69,27 +67,38 @@ def render():
                 index=default_index
             )
 
+    # Se a opção escolhida for "Por dia", adiciona um seletor de data
+    data_selecionada = None
+    if periodo == "Por dia":
+        c_date, _ = st.columns([0.3, 0.7])
+        with c_date:
+            data_selecionada = st.date_input("SELECIONE A DATA", value=pd.Timestamp.today().date())
+
     # Mapeamento dinâmico das variáveis para as colunas físicas do CSV
     if "Máxima" in opcao_metrica:
         col_alvo = "temp_max"
         prefixo_var = "Temp. Máx"
         sufixo_unidade = " °C"
-        cor_barras = "#E05353"  # Vermelho quente
+        cor_barras = "#E05353"
+        mode_extremo = "max"
     elif "Mínima" in opcao_metrica:
         col_alvo = "temp_min"
         prefixo_var = "Temp. Mín"
         sufixo_unidade = " °C"
-        cor_barras = "#06B6D4"  # Azul ciano/frio
+        cor_barras = "#06B6D4"
+        mode_extremo = "min"
     elif "Precipitação" in opcao_metrica:
         col_alvo = "chuva"
         prefixo_var = "Chuva"
         sufixo_unidade = " mm"
-        cor_barras = "#3B82F6"  # Azul escuro
+        cor_barras = "#3B82F6"
+        mode_extremo = "sum"
     else: # Maior Rajada
         col_alvo = "vento_raj"
         prefixo_var = "Rajada"
         sufixo_unidade = " m/s"
-        cor_barras = "#8B5CF6"  # Roxo
+        cor_barras = "#8B5CF6"
+        mode_extremo = "max"
 
     # =====================================================
     # COMPILAÇÃO DOS DADOS DE TODAS AS ESTAÇÕES
@@ -100,31 +109,57 @@ def render():
         for nome_estacao, arquivo_csv in stations.items():
             df_estacao = load_station_data(arquivo_csv)
             
-            if df_estacao.empty or "data" not in df_estacao.columns or col_alvo not in df_estacao.columns:
+            if df_estacao.empty or "data" not in df_estacao.columns:
                 continue
+
+            # Garante que a coluna alvo exista
+            if col_alvo not in df_estacao.columns:
+                df_estacao[col_alvo] = 0.0 if col_alvo == "chuva" else pd.NA
                 
-            # Filtra pelo período selecionado
-            df_filtrado = filter_period(df_estacao, periodo)
+            # Tratamento para precipitação (substitui nulos por zero)
+            if col_alvo == "chuva":
+                df_estacao[col_alvo] = df_estacao[col_alvo].fillna(0.0)
+
+            # Lógica de Filtro por Período
+            if periodo == "Por dia":
+                if data_selecionada is None:
+                    continue
+                df_filtrado = df_estacao[df_estacao["data"].dt.date == data_selecionada]
+            else:
+                df_filtrado = filter_period(df_estacao, periodo)
             
             if df_filtrado.empty:
                 continue
+
+            # =====================================================
+            # AGREGAÇÃO DIÁRIA COM REGISTRO DA HORA
+            # =====================================================
+            for data_dia, df_dia in df_filtrado.groupby(df_filtrado["data"].dt.date):
+                df_dia_valid = df_dia.dropna(subset=[col_alvo])
                 
-            # Remove valores nulos
-            df_filtrado = df_filtrado.dropna(subset=[col_alvo])
-            
-            # REGRA: Se for chuva, exibir estritamente valores maiores que 15mm
-            if col_alvo == "chuva":
-                df_filtrado = df_filtrado[df_filtrado[col_alvo] > 15]
-            
-            for _, row in df_filtrado.iterrows():
+                if df_dia_valid.empty:
+                    continue
+
+                if mode_extremo == "sum":
+                    val = df_dia_valid[col_alvo].sum()
+                    dt_registro = df_dia_valid["data"].max() # Última hora registrada do dia
+                elif mode_extremo == "min":
+                    idx = df_dia_valid[col_alvo].idxmin()
+                    val = df_dia_valid.loc[idx, col_alvo]
+                    dt_registro = df_dia_valid.loc[idx, "data"]
+                else: # max
+                    idx = df_dia_valid[col_alvo].idxmax()
+                    val = df_dia_valid.loc[idx, col_alvo]
+                    dt_registro = df_dia_valid.loc[idx, "data"]
+
                 lista_registros.append({
                     "estacao": nome_estacao,
-                    "data_registro": row["data"],
-                    "valor": row[col_alvo]
+                    "data_registro": dt_registro,
+                    "valor": val
                 })
 
     if not lista_registros:
-        st.warning("⚠️ Nenhum registro encontrado para a métrica e período selecionados (Nota: Chuva exibe apenas valores > 15mm).")
+        st.warning("⚠️ Nenhum registro encontrado para o período ou data selecionada.")
         st.stop()
 
     # Cria o DataFrame unificado
@@ -134,8 +169,9 @@ def render():
     ascendente = True if ordem_sel == "Menores valores" else False
     df_ranking = df_geral.sort_values(by="valor", ascending=ascendente).head(top_n)
 
-    # Formatação de string da Data e Rótulo Combinado
+    # Formatação com Data e Hora (DD/MM/AAAA HH:MM)
     df_ranking["data_fmt"] = df_ranking["data_registro"].dt.strftime("%d/%m/%Y %H:%M")
+
     df_ranking["Estação (Data)"] = (
         df_ranking["estacao"].astype(str).str.upper() 
         + " — " 
@@ -154,7 +190,7 @@ def render():
         y="Estação (Data)",
         orientation="h",
         text="valor",
-        labels={"valor": opcao_metrica, "Estação (Data)": "Estação / Data do Registro"}
+        labels={"valor": opcao_metrica, "Estação (Data)": "Estação / Data e Hora do Registro"}
     )
 
     fig.update_traces(
@@ -162,7 +198,6 @@ def render():
         texttemplate=f'%{{text:.1f}}{sufixo_unidade}',
         textposition='inside',
         insidetextanchor='end',
-        # Configura a fonte dos valores internos da barra (Cor Branca + Tamanho Maior)
         textfont=dict(
             color='#FFFFFF',
             size=16,
@@ -179,7 +214,6 @@ def render():
         height=120 + (top_n * 32),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        # Define a fonte global (eixo Y, títulos, etc.) para PRETO e NEGRITO
         font=dict(
             color='#000000',
             size=12,

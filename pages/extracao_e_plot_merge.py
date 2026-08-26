@@ -47,7 +47,6 @@ def dividir_dias_mes(ano: int, mes: int, freq: int):
     ndias = calendar.monthrange(ano, mes)[1] + 1
     dias = [datetime.date(ano, mes, dia).strftime('%Y%m%d') for dia in range(1, ndias)]
     
-    # Divisão utilizando iterutils.chunked exatamente como no script original
     divd = iterutils.chunked(dias, freq)
     
     if len(divd[-1]) == 1:
