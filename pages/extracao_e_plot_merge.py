@@ -7,14 +7,18 @@ import pandas as pd
 import xarray as xr
 import streamlit as st
 from boltons import iterutils
-import glob
 import plotly.graph_objects as go
+from services.acumula_mes_2clima import carregar_acumulado_observado
+
+import xarray as xr
+xr.set_options(use_new_combine_kwarg_defaults=True)
 
 # ==========================================
 # CONSTANTES E CAMINHOS BASE
 # ==========================================
 CAMINHO_BASE_MERGE = Path("src/assets/dados/MERGE")
 CAMINHO_CLIMO = CAMINHO_BASE_MERGE / "CLIMATOLOGY"
+CAMINHO_GRIBS = Path("datasets/gribs")  # Ajuste conforme estrutura real
 CAMINHO_CSV = Path("src/assets/dados/munis_sele_180.csv")
 
 LISTA_MESES = [
@@ -29,7 +33,6 @@ MESES_ABR = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out
 # ==========================================
 @st.cache_data
 def carregar_municipios_am():
-    """Carrega o CSV e filtra estritamente municípios do Amazonas."""
     if not CAMINHO_CSV.exists():
         return pd.DataFrame(columns=["nome", "latitude", "longitude", "uf"])
     df = pd.read_csv(CAMINHO_CSV)
@@ -40,20 +43,16 @@ def carregar_municipios_am():
     return df.sort_values("nome").reset_index(drop=True)
 
 def dividir_dias_mes(ano: int, mes: int, freq: int):
-    """
-    Divide os dias do mês de acordo com a frequência (10 para decêndio, 15 para quinzena).
-    Ajusta o último bloco caso a sobra seja 1 dia.
-    """
     ndias = calendar.monthrange(ano, mes)[1] + 1
     dias = [datetime.date(ano, mes, dia).strftime('%Y%m%d') for dia in range(1, ndias)]
     
-    divd = iterutils.chunked(dias, freq)
+    divd = list(iterutils.chunked(dias, freq))
     
     if len(divd[-1]) == 1:
-        if freq == 15:
+        if freq == 15 and len(divd) > 2:
             divd[1] = divd[1] + divd[-1]
             divd = divd[:2]
-        elif freq == 10:
+        elif freq == 10 and len(divd) > 3:
             divd[2] = divd[2] + divd[-1]
             divd = divd[:3]
             
@@ -61,14 +60,13 @@ def dividir_dias_mes(ano: int, mes: int, freq: int):
 
 @st.cache_data
 def extrair_quantis_estacao(lat_cid, lon_cid, tipo_escala="mensal", num_periodo=1):
-    """Obtém os quantis P15, P35, P65, P85 da distribuição .npy para uma lat/lon."""
     tagarea = "reg_amazonia_bacia_amazonas"
     
-    if tipo_escala == "mensal":
+    if tipo_escala in ["mensal", "Mês"]:
         nome_npy = f"distri_MERGE_mensal_{tagarea}.npy"
-    elif tipo_escala == "quinzena":
+    elif tipo_escala in ["quinzena", "Quinzena"]:
         nome_npy = f"distri_MERGE_{num_periodo}_quinzena_{tagarea}.npy"
-    else: # decendio
+    else:
         nome_npy = f"distri_MERGE_{num_periodo}_decendio_{tagarea}.npy"
         
     arq_npy = CAMINHO_CLIMO / nome_npy
@@ -76,6 +74,7 @@ def extrair_quantis_estacao(lat_cid, lon_cid, tipo_escala="mensal", num_periodo=
     arq_lon = CAMINHO_CLIMO / f"longitude_merge_{tagarea}.txt"
     
     if not (arq_npy.exists() and arq_lat.exists() and arq_lon.exists()):
+        print(f"⚠️ Arquivos de climatologia não encontrados em: {CAMINHO_CLIMO}")
         return None
         
     lat_grid = np.loadtxt(arq_lat)
@@ -88,42 +87,81 @@ def extrair_quantis_estacao(lat_cid, lon_cid, tipo_escala="mensal", num_periodo=
     return distri[:, :, idx_lat, idx_lon]
 
 def extrair_precipitacao_observada(ano: int, lat_cid: float, lon_cid: float, escala: str, sub_idx: int = 1):
-    """Extrai precipitação observada para os 12 meses seguindo o ano e sub-período especificados."""
     precip_obs = []
     
     for m in range(1, 13):
         val = np.nan
         try:
-            if escala == "Mês":
-                str_mes_abr = MESES_ABR[m - 1]
-                padrão_arq = f"*_{str_mes_abr}_{ano}.nc"
-                arqs = list((CAMINHO_BASE_MERGE / "MONTHLY").glob(padrão_arq))
-                if arqs:
-                    ds = xr.open_dataset(arqs[0])
-                    val = ds["pacum"].sel(lat=lat_cid, lon=lon_cid, method="nearest").values.item()
+            if escala in ["Mês", "Mensal"]:
+                print(f"📂 Carregando acumulado mensal observado: {m:02d}/{ano}...")
+                ds_mes = carregar_acumulado_observado(ano, m)
+                lon_t = lon_cid
+                if "longitude" in ds_mes.coords and ds_mes.longitude.max() > 180 and lon_t < 0:
+                    lon_t = 360 + lon_t
+                elif "lon" in ds_mes.coords and ds_mes.lon.max() > 180 and lon_t < 0:
+                    lon_t = 360 + lon_t
+
+                var_prec = next((v for v in ["prec", "pacum", "precip"] if v in ds_mes.data_vars), list(ds_mes.data_vars)[0])
+                
+                if "latitude" in ds_mes.coords:
+                    val = ds_mes[var_prec].sel(latitude=lat_cid, longitude=lon_t, method="nearest").values.item()
+                else:
+                    val = ds_mes[var_prec].sel(lat=lat_cid, lon=lon_t, method="nearest").values.item()
+
             else:
                 freq = 10 if escala == "Decêndio" else 15
                 div_dias = dividir_dias_mes(ano, m, freq)
+                
                 if sub_idx - 1 < len(div_dias):
                     dias_sub = div_dias[sub_idx - 1]
-                    soma_sub = 0.0
-                    contou = False
-                    for d_str in dias_sub:
-                        tagfl = f"{CAMINHO_BASE_MERGE}/Diario/{ano}/{m:02d}/*{d_str}*.grib2"
-                        fl = glob.glob(tagfl)
-                        if fl:
-                            grb = xr.open_dataset(fl[0], engine='cfgrib', decode_timedelta=True)
-                            lon_t = lon_cid
-                            if grb.longitude.max() > 180 and lon_t < 0:
-                                lon_t = 360 + lon_t
-                            val_d = grb['prec'].sel(latitude=lat_cid, longitude=lon_t, method='nearest').values.item()
-                            soma_sub += val_d
-                            contou = True
-                    if contou:
-                        val = soma_sub
-        except Exception:
+                    # Busca tanto na pasta datasets/gribs quanto na estrutura alternativa
+                    pasta_mes = CAMINHO_GRIBS / str(ano) / f"{m:02d}"
+                    if not pasta_mes.exists():
+                        pasta_mes = CAMINHO_BASE_MERGE / str(ano) / f"{m:02d}"
+
+                    arqs_sub = [
+                        str(pasta_mes / f"MERGE_CPTEC_{d_str}.grib2")
+                        for d_str in dias_sub
+                        if (pasta_mes / f"MERGE_CPTEC_{d_str}.grib2").exists()
+                    ]
+                    
+                    if arqs_sub:
+                        print(f"📂 Carregando {len(arqs_sub)} arquivos GRIB2 ({escala} {sub_idx}): {m:02d}/{ano}...")
+                        ds_sub = xr.open_mfdataset(
+                            arqs_sub,
+                            engine="cfgrib",
+                            combine="nested",
+                            concat_dim="time",
+                            coords='minimal',
+                            compat='override',
+                            parallel=False,
+                            backend_kwargs={
+                                "filter_by_keys": {"typeOfLevel": "surface"},
+                                "indexpath": ""
+                            }
+                        )
+                        ds_soma = ds_sub.sum(dim="time", keep_attrs=True)
+                        
+                        lon_t = lon_cid
+                        if "longitude" in ds_soma.coords and ds_soma.longitude.max() > 180 and lon_t < 0:
+                            lon_t = 360 + lon_t
+                        elif "lon" in ds_soma.coords and ds_soma.lon.max() > 180 and lon_t < 0:
+                            lon_t = 360 + lon_t
+                            
+                        var_prec = "prec" if "prec" in ds_soma.data_vars else list(ds_soma.data_vars)[0]
+                        if "latitude" in ds_soma.coords:
+                            val = ds_soma[var_prec].sel(latitude=lat_cid, longitude=lon_t, method="nearest").values.item()
+                        else:
+                            val = ds_soma[var_prec].sel(lat=lat_cid, lon=lon_t, method="nearest").values.item()
+                    else:
+                        print(f"⚠️ Nenhum arquivo GRIB2 encontrado para {dias_sub[0]} a {dias_sub[-1]} em {pasta_mes}")
+
+        except Exception as e:
+            print(f"❌ Erro ao processar mês {m}/{ano} na escala {escala}: {str(e)}")
             val = np.nan
+            
         precip_obs.append(val)
+        
     return precip_obs
 
 # ==========================================
@@ -176,68 +214,71 @@ def render():
         st.error("Nenhum município do Amazonas foi localizado no arquivo munis_sele_180.csv.")
         return
 
-    # Filtros Superiores Principais
     c1, c2, c3 = st.columns([2, 2, 3])
     with c1:
         st.markdown('<div class="filter-label">MUNICÍPIO (AM)</div>', unsafe_allow_html=True)
-        municipio_sel = st.selectbox("", df_am["nome"].unique())
+        municipio_sel = st.selectbox("Município", df_am["nome"].unique(), label_visibility="collapsed")
     with c2:
         st.markdown('<div class="filter-label">PRODUTO</div>', unsafe_allow_html=True)
-        tipo_viz = st.radio("", ["Gráficos Individuais", "Comparativo"], horizontal=True)
+        tipo_viz = st.radio("Produto", ["Gráficos Individuais", "Comparativo"], horizontal=True, label_visibility="collapsed")
     with c3:
         st.markdown('<div class="filter-label">ESCALA TEMPORAL</div>', unsafe_allow_html=True)
-        # Regra: Mensal disponível APENAS em Comparativo
-        opcoes_escala = ["Decêndio", "Quinzena"] if tipo_viz == "Gráficos Individuais" else ["Mês"]
-        escala = st.radio("", opcoes_escala, horizontal=True)
+        opcoes_escala = ["Decêndio", "Quinzena", "Mês"] if tipo_viz == "Gráficos Individuais" else ["Mês"]
+        escala = st.radio("Escala Temporal", opcoes_escala, horizontal=True, label_visibility="collapsed")
 
     info_cidade = df_am[df_am["nome"] == municipio_sel].iloc[0]
     lat_cid, lon_cid = info_cidade["latitude"], info_cidade["longitude"]
 
     st.markdown("---")
 
-    # MODO 1: GRÁFICOS INDIVIDUAIS (Ano + Mês -> Mostra 3 Decêndios ou 2 Quinzenas empilhados)
+    # MODO 1: GRÁFICOS INDIVIDUAIS
     if tipo_viz == "Gráficos Individuais":
         col_ano, col_mes = st.columns(2)
         with col_ano:
             st.markdown('<div class="filter-label">ANO</div>', unsafe_allow_html=True)
-            ano_sel = st.selectbox("", ["2026", "2025", "2024", "2023"], key="ano_ind_graf")
+            ano_sel = st.selectbox("Ano", ["2026", "2025", "2024", "2023"], key="ano_ind_graf", label_visibility="collapsed")
         with col_mes:
             st.markdown('<div class="filter-label">MÊS</div>', unsafe_allow_html=True)
-            mes_sel = st.selectbox("", LISTA_MESES, key="mes_ind_graf")
+            mes_sel = st.selectbox("Mês", LISTA_MESES, key="mes_ind_graf", label_visibility="collapsed")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        qtd_periodos = 3 if escala == "Decêndio" else 2
-        tipo_npy = "decendio" if escala == "Decêndio" else "quinzena"
+        if escala == "Mês":
+            quantis = extrair_quantis_estacao(lat_cid, lon_cid, tipo_escala="mensal")
+            precip_obs = extrair_precipitacao_observada(int(ano_sel), lat_cid, lon_cid, "Mês")
+            fig = criar_grafico_clima(municipio_sel, ano_sel, mes_sel, "Mês", quantis, precip_obs)
+            st.plotly_chart(fig, width="stretch")
+        else:
+            qtd_periodos = 3 if escala == "Decêndio" else 2
+            tipo_npy = "decendio" if escala == "Decêndio" else "quinzena"
 
-        # Gera os 3 gráficos para decêndio ou os 2 gráficos para quinzena empilhados
-        for i in range(1, qtd_periodos + 1):
-            quantis = extrair_quantis_estacao(lat_cid, lon_cid, tipo_escala=tipo_npy, num_periodo=i)
-            precip_obs = extrair_precipitacao_observada(int(ano_sel), lat_cid, lon_cid, escala, i)
-            
-            fig = criar_grafico_clima(municipio_sel, ano_sel, mes_sel, escala, quantis, precip_obs, sub_periodo=i)
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown("<br>", unsafe_allow_html=True)
+            for i in range(1, qtd_periodos + 1):
+                quantis = extrair_quantis_estacao(lat_cid, lon_cid, tipo_escala=tipo_npy, num_periodo=i)
+                precip_obs = extrair_precipitacao_observada(int(ano_sel), lat_cid, lon_cid, escala, i)
+                
+                fig = criar_grafico_clima(municipio_sel, ano_sel, mes_sel, escala, quantis, precip_obs, sub_periodo=i)
+                st.plotly_chart(fig, width="stretch")
+                st.markdown("<br>", unsafe_allow_html=True)
 
-    # MODO 2: COMPARATIVO MENSAL (2 Anos Selecionados)
+    # MODO 2: COMPARATIVO MENSAL (Um abaixo do outro)
     else:
         st.subheader("📊 Comparativo Mensal de Dois Anos")
         c_a1, c_a2 = st.columns(2)
         with c_a1:
             st.markdown('<div class="filter-label">PRIMEIRO ANO</div>', unsafe_allow_html=True)
-            ano1 = st.selectbox("", ["2026", "2025", "2024", "2023"], index=1, key="comp_ano1")
+            ano1 = st.selectbox("Primeiro Ano", ["2026", "2025", "2024", "2023"], index=1, key="comp_ano1", label_visibility="collapsed")
         with c_a2:
             st.markdown('<div class="filter-label">SEGUNDO ANO</div>', unsafe_allow_html=True)
-            ano2 = st.selectbox("", ["2026", "2025", "2024", "2023"], index=0, key="comp_ano2")
+            ano2 = st.selectbox("Segundo Ano", ["2026", "2025", "2024", "2023"], index=0, key="comp_ano2", label_visibility="collapsed")
 
         quantis_m = extrair_quantis_estacao(lat_cid, lon_cid, tipo_escala="mensal")
         precip_obs1 = extrair_precipitacao_observada(int(ano1), lat_cid, lon_cid, "Mês")
         precip_obs2 = extrair_precipitacao_observada(int(ano2), lat_cid, lon_cid, "Mês")
 
-        col_g1, col_g2 = st.columns(2)
-        with col_g1:
-            fig1 = criar_grafico_clima(municipio_sel, ano1, "Geral", "Mês", quantis_m, precip_obs1)
-            st.plotly_chart(fig1, use_container_width=True)
-        with col_g2:
-            fig2 = criar_grafico_clima(municipio_sel, ano2, "Geral", "Mês", quantis_m, precip_obs2)
-            st.plotly_chart(fig2, use_container_width=True)
+        fig1 = criar_grafico_clima(municipio_sel, ano1, "Geral", "Mês", quantis_m, precip_obs1)
+        st.plotly_chart(fig1, width="stretch")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        fig2 = criar_grafico_clima(municipio_sel, ano2, "Geral", "Mês", quantis_m, precip_obs2)
+        st.plotly_chart(fig2, width="stretch")
