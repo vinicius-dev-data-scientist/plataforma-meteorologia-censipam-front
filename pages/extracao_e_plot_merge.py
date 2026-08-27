@@ -194,9 +194,10 @@ def criar_grafico_clima(cidade, ano, mes_nome, escala, quantis, precip_obs, sub_
     sub_tit = f" — {sub_periodo}º {escala.upper()}" if sub_periodo else ""
     fig.update_layout(
         title=f"<b>Precipitação vs. Climatologia — {cidade} ({mes_nome}/{ano}){sub_tit}</b>",
-        xaxis_title="Mês", yaxis_title="Chuva (mm)",
+        xaxis_title="Mês", yaxis_title="<b>Chuva (mm)</b>",
         hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        margin=dict(l=20, r=20, t=60, b=20), height=380
+        margin=dict(l=20, r=20, t=60, b=20), height=380,
+        font=dict(color="black")
     )
     return fig
 

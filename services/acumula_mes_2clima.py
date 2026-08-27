@@ -22,9 +22,7 @@ def obter_dias_do_mes(ano: int, mes: int) -> list:
 def carregar_acumulado_observado(
     ano: int, mes: int, base_dir: str = "datasets/gribs"
 ) -> xr.Dataset:
-    """Lê os arquivos GRIB2 do mês/ano, verifica a integridade do período e
-
-    retorna o acumulado mensal (dados do Observado).
+    """Lê os arquivos GRIB2 do mês/ano, verifica a integridade do período e retorna o acumulado mensal (dados do Observado).
     """
     dias_esperados = obter_dias_do_mes(ano, mes)
     pasta_mes = os.path.join(base_dir, str(ano), f"{mes:02d}")
