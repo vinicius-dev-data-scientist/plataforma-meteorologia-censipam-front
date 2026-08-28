@@ -7,6 +7,7 @@ import pandas as pd
 import xarray as xr
 import streamlit as st
 from boltons import iterutils
+import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from services.acumula_mes_2clima import carregar_acumulado_observado
 
@@ -88,12 +89,35 @@ def extrair_quantis_estacao(lat_cid, lon_cid, tipo_escala="mensal", num_periodo=
 
 def extrair_precipitacao_observada(ano: int, lat_cid: float, lon_cid: float, escala: str, sub_idx: int = 1):
     precip_obs = []
+    is_parcial = []  # Lista para sinalizar períodos incompletos
     
     for m in range(1, 13):
         val = np.nan
+        parcial = False
         try:
             if escala in ["Mês", "Mensal"]:
-                print(f"📂 Carregando acumulado mensal observado: {m:02d}/{ano}...")
+                print(f"📂 Verificando acumulado mensal observado: {m:02d}/{ano}...")
+                
+                ndias_mes = calendar.monthrange(ano, m)[1]
+                pasta_mes = CAMINHO_GRIBS / str(ano) / f"{m:02d}"
+                if not pasta_mes.exists():
+                    pasta_mes = CAMINHO_BASE_MERGE / str(ano) / f"{m:02d}"
+                
+                dias_esperados = [
+                    str(pasta_mes / f"MERGE_CPTEC_{ano}{m:02d}{d:02d}.grib2")
+                    for d in range(1, ndias_mes + 1)
+                ]
+                arqs_existentes = [f for f in dias_esperados if Path(f).exists()]
+                
+                if not arqs_existentes:
+                    precip_obs.append(np.nan)
+                    is_parcial.append(False)
+                    continue
+
+                if len(arqs_existentes) < ndias_mes:
+                    parcial = True
+                    print(f"⚠️ Mês {m:02d}/{ano} incompleto ({len(arqs_existentes)}/{ndias_mes} dias). Calculando acumulado parcial.")
+
                 ds_mes = carregar_acumulado_observado(ano, m)
                 lon_t = lon_cid
                 if "longitude" in ds_mes.coords and ds_mes.longitude.max() > 180 and lon_t < 0:
@@ -114,7 +138,8 @@ def extrair_precipitacao_observada(ano: int, lat_cid: float, lon_cid: float, esc
                 
                 if sub_idx - 1 < len(div_dias):
                     dias_sub = div_dias[sub_idx - 1]
-                    # Busca tanto na pasta datasets/gribs quanto na estrutura alternativa
+                    qtd_dias_esperados = len(dias_sub)
+
                     pasta_mes = CAMINHO_GRIBS / str(ano) / f"{m:02d}"
                     if not pasta_mes.exists():
                         pasta_mes = CAMINHO_BASE_MERGE / str(ano) / f"{m:02d}"
@@ -126,7 +151,10 @@ def extrair_precipitacao_observada(ano: int, lat_cid: float, lon_cid: float, esc
                     ]
                     
                     if arqs_sub:
-                        print(f"📂 Carregando {len(arqs_sub)} arquivos GRIB2 ({escala} {sub_idx}): {m:02d}/{ano}...")
+                        if len(arqs_sub) < qtd_dias_esperados:
+                            parcial = True
+                            print(f"⚠️ {escala} {sub_idx} de {m:02d}/{ano} incompleto ({len(arqs_sub)}/{qtd_dias_esperados} dias). Calculando acumulado parcial.")
+
                         ds_sub = xr.open_mfdataset(
                             arqs_sub,
                             engine="cfgrib",
@@ -153,34 +181,75 @@ def extrair_precipitacao_observada(ano: int, lat_cid: float, lon_cid: float, esc
                             val = ds_soma[var_prec].sel(latitude=lat_cid, longitude=lon_t, method="nearest").values.item()
                         else:
                             val = ds_soma[var_prec].sel(lat=lat_cid, lon=lon_t, method="nearest").values.item()
-                    else:
-                        print(f"⚠️ Nenhum arquivo GRIB2 encontrado para {dias_sub[0]} a {dias_sub[-1]} em {pasta_mes}")
 
         except Exception as e:
             print(f"❌ Erro ao processar mês {m}/{ano} na escala {escala}: {str(e)}")
             val = np.nan
+            parcial = False
             
         precip_obs.append(val)
+        is_parcial.append(parcial)
         
-    return precip_obs
+    return precip_obs, is_parcial
+
 
 # ==========================================
 # RENDERIZAÇÃO DE GRÁFICOS (PLOTLY)
 # ==========================================
-def criar_grafico_clima(cidade, ano, mes_nome, escala, quantis, precip_obs, sub_periodo=None):
+def criar_grafico_clima(cidade, ano, mes_nome, escala, quantis, precip_obs_tuple, sub_periodo=None):
     fig = go.Figure()
     meses_labels = [m[:3] for m in LISTA_MESES]
     
+    if isinstance(precip_obs_tuple, tuple):
+        precip_obs, is_parcial = precip_obs_tuple
+    else:
+        precip_obs, is_parcial = precip_obs_tuple, [False]*12
+
     if quantis is not None and quantis.shape[1] == 4:
         p15, p35, p65, p85 = quantis[:, 0], quantis[:, 1], quantis[:, 2], quantis[:, 3]
         
-        fig.add_trace(go.Scatter(x=meses_labels, y=p15, name="Muito Seco (< P15)", fill='tozeroy', fillcolor='rgba(248, 194, 69, 0.4)', line=dict(color='rgba(0,0,0,0)')))
-        fig.add_trace(go.Scatter(x=meses_labels, y=p35, name="Seco (P15–P35)", fill='tonexty', fillcolor='rgba(253, 250, 172, 0.5)', line=dict(color='rgba(0,0,0,0)')))
-        fig.add_trace(go.Scatter(x=meses_labels, y=p65, name="Normal", fill='tonexty', fillcolor='rgba(226, 232, 240, 0.6)', line=dict(color='rgba(0,0,0,0)')))
-        fig.add_trace(go.Scatter(x=meses_labels, y=p85, name="Chuvoso (P65–P85)", fill='tonexty', fillcolor='rgba(187, 239, 249, 0.5)', line=dict(color='rgba(0,0,0,0)')))
+        fig.add_trace(go.Scatter(
+            x=meses_labels, y=p15, name="Muito Seco (< P15)", 
+            fill='tozeroy', fillcolor='rgba(248, 194, 69, 0.4)', 
+            line=dict(color='rgba(0,0,0,0)'),
+            hovertemplate="<b>%{y:.2f}</b><extra><b>%{fullData.name}</b></extra>"
+        ))
+        fig.add_trace(go.Scatter(
+            x=meses_labels, y=p35, name="Seco (P15–P35)", 
+            fill='tonexty', fillcolor='rgba(253, 250, 172, 0.5)', 
+            line=dict(color='rgba(0,0,0,0)'),
+            hovertemplate="<b>%{y:.2f}</b><extra><b>%{fullData.name}</b></extra>"
+        ))
+        fig.add_trace(go.Scatter(
+            x=meses_labels, y=p65, name="Normal", 
+            fill='tonexty', fillcolor='rgba(226, 232, 240, 0.6)', 
+            line=dict(color='rgba(0,0,0,0)'),
+            hovertemplate="<b>%{y:.2f}</b><extra><b>%{fullData.name}</b></extra>"
+        ))
+        fig.add_trace(go.Scatter(
+            x=meses_labels, y=p85, name="Chuvoso (P65–P85)", 
+            fill='tonexty', fillcolor='rgba(187, 239, 249, 0.5)', 
+            line=dict(color='rgba(0,0,0,0)'),
+            hovertemplate="<b>%{y:.2f}</b><extra><b>%{fullData.name}</b></extra>"
+        ))
         
-        y_max = max(np.nanmax(p85) * 1.2 if not np.isnan(p85).all() else 100, 50)
-        fig.add_trace(go.Scatter(x=meses_labels, y=[y_max]*12, name="Muito Chuvoso (> P85)", fill='tonexty', fillcolor='rgba(37, 99, 235, 0.15)', line=dict(color='rgba(0,0,0,0)')))
+        # Ajuste para mostrar o valor real de P85 no tooltip de "Muito Chuvoso" e preencher até a borda superior do eixo Y
+        fig.add_trace(go.Scatter(
+            x=meses_labels, y=p85, name="Muito Chuvoso (> P85)", 
+            fill='tonexty', fillcolor='rgba(37, 99, 235, 0.15)', 
+            line=dict(color='rgba(0,0,0,0)'),
+            hovertemplate="<b>%{y:.2f}</b><extra><b>%{fullData.name}</b></extra>"
+        ))
+
+    # Constrói o texto do hover dinamicamente para o Observado
+    hover_texts_obs = []
+    for v, p in zip(precip_obs, is_parcial):
+        if np.isnan(v):
+            hover_texts_obs.append("")
+        elif p:
+            hover_texts_obs.append(f"⚠️ Acumulado parcial: {v:.2f}")
+        else:
+            hover_texts_obs.append(f"{v:.2f}")
 
     fig.add_trace(go.Scatter(
         x=meses_labels, y=precip_obs, name=f"Observado ({ano})",
@@ -188,16 +257,35 @@ def criar_grafico_clima(cidade, ano, mes_nome, escala, quantis, precip_obs, sub_
         text=[f"{v:.1f}" if not np.isnan(v) else "" for v in precip_obs],
         textposition="top center",
         line=dict(color='darkblue', width=3),
-        marker=dict(size=8, color='orange')
+        marker=dict(size=8, color='orange'),
+        hovertext=hover_texts_obs,
+        hovertemplate="<b>%{hovertext}</b><extra><b>%{fullData.name}</b></extra>"
     ))
 
     sub_tit = f" — {sub_periodo}º {escala.upper()}" if sub_periodo else ""
     fig.update_layout(
         title=f"<b>Precipitação vs. Climatologia — {cidade} ({mes_nome}/{ano}){sub_tit}</b>",
-        xaxis_title="Mês", yaxis_title="<b>Chuva (mm)</b>",
-        hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        hovermode="x unified",
         margin=dict(l=20, r=20, t=60, b=20), height=380,
-        font=dict(color="black")
+        font=dict(color="black"),
+        hoverlabel=dict(
+            font_size=12,
+            font_family="Arial",
+            font_color="black"
+        ),
+        xaxis=dict(
+            title=dict(text="<b>Mês</b>", font=dict(color="black", size=14)),
+            tickfont=dict(color="black", style="normal", family="Arial Black")
+        ),
+        yaxis=dict(
+            title=dict(text="<b>Chuva (mm)</b>", font=dict(color="black", size=14)),
+            tickfont=dict(color="black", style="normal", family="Arial Black"),
+            range=[0, 500]  # Fixa a escala do eixo Y até 500 mm
+        ),
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+            font=dict(color="black", size=12, family="Arial")
+        )
     )
     return fig
 
