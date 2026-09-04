@@ -196,7 +196,7 @@ def extrair_precipitacao_observada(ano: int, lat_cid: float, lon_cid: float, esc
 # ==========================================
 # RENDERIZAÇÃO DE GRÁFICOS (PLOTLY)
 # ==========================================
-def criar_grafico_clima(cidade, ano, mes_nome, escala, quantis, precip_obs_tuple, sub_periodo=None):
+def criar_grafico_clima(cidade, ano, escala, quantis, precip_obs_tuple, sub_periodo=None):
     fig = go.Figure()
     meses_labels = [m[:3] for m in LISTA_MESES]
     
@@ -207,38 +207,51 @@ def criar_grafico_clima(cidade, ano, mes_nome, escala, quantis, precip_obs_tuple
 
     if quantis is not None and quantis.shape[1] == 4:
         p15, p35, p65, p85 = quantis[:, 0], quantis[:, 1], quantis[:, 2], quantis[:, 3]
+        y_topo = np.full_like(p85, 500.0) # Limite superior do eixo Y
         
+        # 1. Muito Seco (< P15)
         fig.add_trace(go.Scatter(
             x=meses_labels, y=p15, name="Muito Seco (< P15)", 
             fill='tozeroy', fillcolor='rgba(248, 194, 69, 0.4)', 
             line=dict(color='rgba(0,0,0,0)'),
-            hovertemplate="<b>%{y:.2f}</b><extra><b>%{fullData.name}</b></extra>"
+            customdata=p15,
+            hovertemplate="<b>%{customdata:.2f}</b><extra><b>%{fullData.name}</b></extra>"
         ))
+        
+        # 2. Seco (P15–P35)
         fig.add_trace(go.Scatter(
             x=meses_labels, y=p35, name="Seco (P15–P35)", 
             fill='tonexty', fillcolor='rgba(253, 250, 172, 0.5)', 
             line=dict(color='rgba(0,0,0,0)'),
-            hovertemplate="<b>%{y:.2f}</b><extra><b>%{fullData.name}</b></extra>"
+            customdata=np.stack((p15, p35), axis=-1),
+            hovertemplate="<b>%{customdata[1]:.2f}</b> (<b>%{customdata[0]:.2f}</b> – <b>%{customdata[1]:.2f}</b>)<extra><b>%{fullData.name}</b></extra>"
         ))
+        
+        # 3. Normal (P35–P65)
         fig.add_trace(go.Scatter(
             x=meses_labels, y=p65, name="Normal", 
             fill='tonexty', fillcolor='rgba(226, 232, 240, 0.6)', 
             line=dict(color='rgba(0,0,0,0)'),
-            hovertemplate="<b>%{y:.2f}</b><extra><b>%{fullData.name}</b></extra>"
+            customdata=np.stack((p35, p65), axis=-1),
+            hovertemplate="<b>%{customdata[1]:.2f}</b> (<b>%{customdata[0]:.2f}</b> – <b>%{customdata[1]:.2f}</b>)<extra><b>%{fullData.name}</b></extra>"
         ))
+        
+        # 4. Chuvoso (P65–P85)
         fig.add_trace(go.Scatter(
             x=meses_labels, y=p85, name="Chuvoso (P65–P85)", 
             fill='tonexty', fillcolor='rgba(187, 239, 249, 0.5)', 
             line=dict(color='rgba(0,0,0,0)'),
-            hovertemplate="<b>%{y:.2f}</b><extra><b>%{fullData.name}</b></extra>"
+            customdata=np.stack((p65, p85), axis=-1),
+            hovertemplate="<b>%{customdata[1]:.2f}</b> (<b>%{customdata[0]:.2f}</b> – <b>%{customdata[1]:.2f}</b>)<extra><b>%{fullData.name}</b></extra>"
         ))
         
-        # Ajuste para mostrar o valor real de P85 no tooltip de "Muito Chuvoso" e preencher até a borda superior do eixo Y
+        # 5. Muito Chuvoso (> P85) -> Preenche de P85 até o topo (500mm)
         fig.add_trace(go.Scatter(
-            x=meses_labels, y=p85, name="Muito Chuvoso (> P85)", 
-            fill='tonexty', fillcolor='rgba(37, 99, 235, 0.15)', 
+            x=meses_labels, y=y_topo, name="Muito Chuvoso (> P85)", 
+            fill='tonexty', fillcolor='rgba(37, 99, 235, 0.20)', 
             line=dict(color='rgba(0,0,0,0)'),
-            hovertemplate="<b>%{y:.2f}</b><extra><b>%{fullData.name}</b></extra>"
+            customdata=p85,
+            hovertemplate="<b>> %{customdata:.2f}</b><extra><b>%{fullData.name}</b></extra>"
         ))
 
     # Constrói o texto do hover dinamicamente para o Observado
@@ -264,7 +277,7 @@ def criar_grafico_clima(cidade, ano, mes_nome, escala, quantis, precip_obs_tuple
 
     sub_tit = f" — {sub_periodo}º {escala.upper()}" if sub_periodo else ""
     fig.update_layout(
-        title=f"<b>Precipitação vs. Climatologia — {cidade} ({mes_nome}/{ano}){sub_tit}</b>",
+        title=f"<b>Precipitação vs. Climatologia — {cidade} ({ano}){sub_tit}</b>",
         hovermode="x unified",
         margin=dict(l=20, r=20, t=60, b=20), height=380,
         font=dict(color="black"),
@@ -280,7 +293,7 @@ def criar_grafico_clima(cidade, ano, mes_nome, escala, quantis, precip_obs_tuple
         yaxis=dict(
             title=dict(text="<b>Chuva (mm)</b>", font=dict(color="black", size=14)),
             tickfont=dict(color="black", style="normal", family="Arial Black"),
-            range=[0, 500]  # Fixa a escala do eixo Y até 500 mm
+            range=[0, 500]
         ),
         legend=dict(
             orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
@@ -322,20 +335,15 @@ def render():
 
     # MODO 1: GRÁFICOS INDIVIDUAIS
     if tipo_viz == "Gráficos Individuais":
-        col_ano, col_mes = st.columns(2)
-        with col_ano:
-            st.markdown('<div class="filter-label">ANO</div>', unsafe_allow_html=True)
-            ano_sel = st.selectbox("Ano", ["2026", "2025", "2024", "2023"], key="ano_ind_graf", label_visibility="collapsed")
-        with col_mes:
-            st.markdown('<div class="filter-label">MÊS</div>', unsafe_allow_html=True)
-            mes_sel = st.selectbox("Mês", LISTA_MESES, key="mes_ind_graf", label_visibility="collapsed")
+        st.markdown('<div class="filter-label">ANO</div>', unsafe_allow_html=True)
+        ano_sel = st.selectbox("Ano", ["2026", "2025", "2024", "2023"], key="ano_ind_graf", label_visibility="collapsed")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
         if escala == "Mês":
             quantis = extrair_quantis_estacao(lat_cid, lon_cid, tipo_escala="mensal")
             precip_obs = extrair_precipitacao_observada(int(ano_sel), lat_cid, lon_cid, "Mês")
-            fig = criar_grafico_clima(municipio_sel, ano_sel, mes_sel, "Mês", quantis, precip_obs)
+            fig = criar_grafico_clima(municipio_sel, ano_sel, "Mês", quantis, precip_obs)
             st.plotly_chart(fig, width="stretch")
         else:
             qtd_periodos = 3 if escala == "Decêndio" else 2
@@ -345,11 +353,11 @@ def render():
                 quantis = extrair_quantis_estacao(lat_cid, lon_cid, tipo_escala=tipo_npy, num_periodo=i)
                 precip_obs = extrair_precipitacao_observada(int(ano_sel), lat_cid, lon_cid, escala, i)
                 
-                fig = criar_grafico_clima(municipio_sel, ano_sel, mes_sel, escala, quantis, precip_obs, sub_periodo=i)
+                fig = criar_grafico_clima(municipio_sel, ano_sel, escala, quantis, precip_obs, sub_periodo=i)
                 st.plotly_chart(fig, width="stretch")
                 st.markdown("<br>", unsafe_allow_html=True)
 
-    # MODO 2: COMPARATIVO MENSAL (Um abaixo do outro)
+    # MODO 2: COMPARATIVO MENSAL
     else:
         st.subheader("📊 Comparativo Mensal de Dois Anos")
         c_a1, c_a2 = st.columns(2)
@@ -364,10 +372,10 @@ def render():
         precip_obs1 = extrair_precipitacao_observada(int(ano1), lat_cid, lon_cid, "Mês")
         precip_obs2 = extrair_precipitacao_observada(int(ano2), lat_cid, lon_cid, "Mês")
 
-        fig1 = criar_grafico_clima(municipio_sel, ano1, "Geral", "Mês", quantis_m, precip_obs1)
+        fig1 = criar_grafico_clima(municipio_sel, ano1, "Mês", quantis_m, precip_obs1)
         st.plotly_chart(fig1, width="stretch")
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        fig2 = criar_grafico_clima(municipio_sel, ano2, "Geral", "Mês", quantis_m, precip_obs2)
+        fig2 = criar_grafico_clima(municipio_sel, ano2, "Mês", quantis_m, precip_obs2)
         st.plotly_chart(fig2, width="stretch")

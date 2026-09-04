@@ -104,7 +104,7 @@ NUMERIC_COLS = [
 #     limpar_meu_cache()
 #     st.session_state["inicializado"] = True    
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Carregando dados da estação...")
 def load_station_data(station_file):
 
     path = os.path.join(
@@ -447,7 +447,7 @@ def render():
         )
 
         station_name = st.selectbox(
-            "",
+            "Selecione a Estação",  # Adicione um nome descritivo
             list(stations.keys()),
             label_visibility="collapsed"
         )
@@ -464,7 +464,7 @@ def render():
         )
 
         produto = st.radio(
-            "",
+            "Selecione a opção",
             [
                 "Resumo Diário",
                 "Eventos Extremos",
@@ -478,9 +478,10 @@ def render():
     # LOAD DATA
     # =========================
 
-    file_name = stations[station_name]
+    if station_name:
+        file_name = stations[station_name]
 
-    df = load_station_data(file_name)
+        df = load_station_data(file_name)
 
     if df.empty:
 
@@ -549,7 +550,7 @@ def render():
                 )
 
                 start_date = st.date_input(
-                    "",
+                    "Selecione a data de início: ",
                     value=(max_date-pd.Timedelta(days=15)),
                     min_value=min_date,
                     max_value=max_date,
@@ -566,7 +567,7 @@ def render():
                 )
 
                 end_date = st.date_input(
-                    "",
+                    "Selecione a data de fim: ",
                     value=max_date,
                     min_value=min_date,
                     max_value=max_date,
@@ -1170,7 +1171,7 @@ def render_resumo(
         st.plotly_chart(
             fig_temp,
             theme=None,
-            use_container_width=True
+            width='content'
         )
 
     # =========================
@@ -1316,7 +1317,7 @@ def render_resumo(
         st.plotly_chart(
             fig_umid,
             theme=None,
-            use_container_width=True,
+            width='content',
             config={
                 "locale": "pt-BR"
             }
@@ -1429,7 +1430,7 @@ def render_resumo(
         st.plotly_chart(
             fig_prec,
             theme=None,
-            use_container_width=True,
+            width='content',
             config={
                 "locale": "pt-BR"
             }
@@ -1530,7 +1531,7 @@ def render_resumo(
         st.plotly_chart(
             fig_vento,
             theme=None,
-            use_container_width=True,
+            width='content',
             config={
                 "locale": "pt-BR"
             }
@@ -1875,7 +1876,7 @@ def render_extremos(df, station, data_inicio, data_fim):
 
     fig.update_traces(textposition="outside")
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='content')
 
 def render_registro_diario(
     df,
@@ -2204,7 +2205,7 @@ def render_registro_diario(
         st.plotly_chart(
             fig_temp,
             theme=None,
-            use_container_width=True,
+            width='content',
             config={
                 "locale": "pt-BR"
             }
@@ -2365,7 +2366,7 @@ def render_registro_diario(
         st.plotly_chart(
             fig_umid,
             theme=None,
-            use_container_width=True,
+            width='content',
             config={
                 "locale": "pt-BR"
             }
@@ -2463,7 +2464,7 @@ def render_registro_diario(
         st.plotly_chart(
             fig_prec,
             theme=None,
-            use_container_width=True,
+            width='content',
             config={
                 "locale": "pt-BR"
             }
@@ -2558,7 +2559,7 @@ def render_registro_diario(
         st.plotly_chart(
             fig_vento,
             theme=None,
-            use_container_width=True,
+            width='content',
             config={
                 "locale": "pt-BR"
             }
